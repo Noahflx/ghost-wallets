@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { SendPaymentForm } from "@/components/send-payment-form"
 import { RecentTransactions } from "@/components/recent-transactions"
+import { DashboardAnalytics } from "@/components/dashboard-analytics"
+import { DemoWalkthrough } from "@/components/demo-walkthrough"
 import Image from "next/image"
 import {
   motion,
@@ -226,6 +228,8 @@ export default function DashboardPage() {
               </div>
             </section>
 
+            <DashboardAnalytics />
+
             {/* Recent activity */}
             <section
               aria-labelledby="recent-activity"
@@ -248,6 +252,8 @@ export default function DashboardPage() {
                 <RecentTransactions />
               </div>
             </section>
+
+            <DemoWalkthrough />
           </div>
         </div>
       </main>

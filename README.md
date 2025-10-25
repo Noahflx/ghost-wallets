@@ -50,6 +50,11 @@ cp .env.example .env.local
 # (Optional) Stellar treasury account secret key. Payments are simulated and this key is ignored.
 STELLAR_TREASURY_SECRET_KEY="${YOUR_TREASURY_SECRET}"
 
+# Auto-fund fresh demo wallets with Friendbot. Enable for cinematic testnet flows.
+STELLAR_PREFUND_WALLETS="true"
+# Override Friendbot endpoint if you run a local Soroban sandbox.
+STELLAR_FRIENDBOT_URL="https://friendbot.stellar.org"
+
 # Gmail credentials used for sending magic link emails
 GMAIL_USER="noahef2030@gmail.com" # optional override
 GMAIL_APP_PASSWORD="${YOUR_GMAIL_APP_PASSWORD}"
@@ -81,7 +86,7 @@ npm run dev
 Ghost Wallets now ships with two safe execution paths so you can demo end-to-end flows without risking real funds:
 
 - **Simulation (default)** – Payments are mocked locally, transaction hashes are deterministically generated, and the dashboard clearly labels activity as “Simulated.” Use this for fast iteration or when you cannot fund a treasury account. A JSON snapshot is persisted to `data/magic-links.json` so links survive server restarts during judging.
-- **Stellar testnet** – Set `STELLAR_PAYMENT_MODE=testnet` and provide `STELLAR_TREASURY_SECRET_KEY`. Transfers are submitted to Soroban RPC, explorer links are surfaced in the UI/email, and recipients can verify hashes on Stellar Expert—still using play money from Friendbot.
+- **Stellar testnet** – Set `STELLAR_PAYMENT_MODE=testnet` and provide `STELLAR_TREASURY_SECRET_KEY`. Transfers are submitted to Soroban RPC, explorer links are surfaced in the UI/email, and recipients can verify hashes on Stellar Expert—still using play money from Friendbot. Enable `STELLAR_PREFUND_WALLETS=true` to auto-call Friendbot for each generated ghost wallet so the dashboard shows a real transaction hash before the claim step.
 
 When testnet submission fails (e.g., RPC outage or unsupported asset), the API gracefully falls back to simulation and records the attempt so judges can continue the journey.
 

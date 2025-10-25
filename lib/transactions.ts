@@ -23,6 +23,9 @@ export interface TransactionRecord {
   fundingMode: PaymentMode
   explorerUrl?: string
   isSimulated: boolean
+  prefundTransactionHash?: string
+  prefundLedger?: number
+  prefundedAt?: string
 }
 
 interface RecordTransactionInput {
@@ -37,6 +40,9 @@ interface RecordTransactionInput {
   fundingMode: PaymentMode
   explorerUrl?: string
   isSimulated: boolean
+  prefundTransactionHash?: string
+  prefundLedger?: number
+  prefundedAt?: string
 }
 
 const globalStores = globalThis as typeof globalThis & {
@@ -98,6 +104,9 @@ export function recordTransaction(input: RecordTransactionInput): TransactionRec
     fundingMode: input.fundingMode,
     explorerUrl: input.explorerUrl,
     isSimulated: input.isSimulated,
+    prefundTransactionHash: input.prefundTransactionHash,
+    prefundLedger: input.prefundLedger,
+    prefundedAt: input.prefundedAt,
   }
 
   transactionStore.set(input.magicLinkTokenHash, record)
