@@ -1,4 +1,5 @@
 import { ClaimWalletFlow } from "@/components/claim-wallet-flow"
+import Image from "next/image"
 
 interface ClaimPageProps {
   params: Promise<{
@@ -15,9 +16,13 @@ export default async function ClaimPage({ params }: ClaimPageProps) {
       <header className="border-b border-border/40">
         <div className="container mx-auto px-4 py-4 flex items-center justify-center">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">G</span>
-            </div>
+          <Image
+  src="/logo.png"
+  alt="Ghost Wallets logo"
+  width={32}
+  height={32}
+  className="rounded-lg"
+/>
             <span className="font-semibold text-xl">Ghost Wallets</span>
           </div>
         </div>

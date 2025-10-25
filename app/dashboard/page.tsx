@@ -1,8 +1,44 @@
+"use client"
+
+import { useState } from "react"
 import { SendPaymentForm } from "@/components/send-payment-form"
 import { RecentTransactions } from "@/components/recent-transactions"
 import Image from "next/image"
+import {
+  motion,
+  useMotionValue,
+  animate,
+  AnimatePresence,
+  useMotionValueEvent,
+} from "framer-motion"
 
 export default function DashboardPage() {
+  const [showSuccess, setShowSuccess] = useState(false)
+
+  // source of truth for balance animation
+  const balance = useMotionValue(60)
+  // plain string to render (fixes "Objects are not valid as a React child")
+  const [displayBalance, setDisplayBalance] = useState(balance.get().toFixed(2))
+  useMotionValueEvent(balance, "change", (v) => {
+    setDisplayBalance(Number(v).toFixed(2))
+  })
+
+  async function handlePaymentSend(amount: number) {
+    const current = balance.get()
+    const target = Math.max(current - Number(amount || 0), 0)
+
+    // smooth, any-number → any-number countdown
+    animate(current, target, {
+      duration: 1.2,
+      ease: "easeInOut",
+      onUpdate: (v) => balance.set(v),
+    })
+
+    // payment sent overlay
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 1600)
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Top bar */}
@@ -16,14 +52,18 @@ export default function DashboardPage() {
               height={32}
               className="rounded-lg"
             />
-
-            <span className="font-semibold text-base sm:text-lg leading-none">Ghost Wallets</span>
+            <span className="font-semibold text-base sm:text-lg leading-none">
+              Ghost Wallets
+            </span>
           </div>
 
           <div className="flex items-center gap-3 text-xs sm:text-sm text-muted-foreground">
-            <span className="hidden sm:inline">Secure cross-border payouts</span>
             <span className="inline-flex items-center gap-2 rounded-md border border-border/40 px-3 py-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
+              <motion.span
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                className="h-2 w-2 rounded-full bg-emerald-500"
+              />
               <span>Operational</span>
             </span>
           </div>
@@ -51,7 +91,10 @@ export default function DashboardPage() {
                   <span className="relative font-medium">
                     {t.label}
                     {t.active && (
-                      <span className="absolute left-0 -bottom-2 block h-[2px] w-full bg-indigo-500 rounded-full" />
+                      <motion.span
+                        layoutId="nav-underline"
+                        className="absolute left-0 -bottom-2 block h-[2px] w-full bg-indigo-500 rounded-full"
+                      />
                     )}
                   </span>
                 </a>
@@ -82,7 +125,7 @@ export default function DashboardPage() {
           {/* Left: Primary action */}
           <section
             aria-labelledby="transfer-form"
-            className="group rounded-2xl bg-card/70 shadow-md hover:shadow-lg transition-all border border-border/30"
+            className="group rounded-2xl bg-card/70 shadow-md hover:shadow-lg transition-all border border-border/30 relative overflow-hidden"
           >
             <header className="flex items-center justify-between px-6 py-5 border-b border-border/30">
               <div className="min-w-0">
@@ -93,18 +136,45 @@ export default function DashboardPage() {
                   Funds move over Stellar. Receiver gets a claim link by email.
                 </p>
               </div>
-              <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="inline-flex h-6 items-center rounded-md border border-border/40 px-2">
-                  No gas setup
-                </span>
-                <span className="inline-flex h-6 items-center rounded-md border border-border/40 px-2">
-                  Compliance-ready
-                </span>
-              </div>
             </header>
+
             <div className="p-6">
-              <SendPaymentForm />
+              {/* Keep your existing logic; only add the handler for the animations */}
+              {/* @ts-ignore - we inject onSend for the animation hook */}
+              <SendPaymentForm onSend={(amount: number) => handlePaymentSend(amount)} />
             </div>
+
+            {/* Success overlay animation */}
+            <AnimatePresence>
+              {showSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm"
+                >
+                  <motion.div
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-center"
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 200, damping: 12 }}
+                      className="w-16 h-16 mx-auto mb-3 rounded-full bg-emerald-500 flex items-center justify-center text-white text-3xl"
+                    >
+                      ✓
+                    </motion.div>
+                    <p className="text-sm font-medium text-emerald-600">
+                      Payment Sent
+                    </p>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="px-6 py-4 border-t border-border/30 text-xs text-muted-foreground">
               Double-check the email before sending. Payments are final once claimed.
@@ -125,7 +195,11 @@ export default function DashboardPage() {
               </header>
               <div className="p-6">
                 <div className="grid grid-cols-2 gap-5">
-                  <Stat label="Available balance" value="60.00" hint="Connect a funding source" />
+                  <Stat
+                    label="Available balance"
+                    value={`$${displayBalance}`}
+                    hint="Connect a funding source"
+                  />
                   <Stat label="Limit remaining" value="—" hint="Set limits in Settings" />
                 </div>
 
@@ -195,7 +269,7 @@ export default function DashboardPage() {
   )
 }
 
-/** Polished stat card component */
+/** Reusable stat card (no MotionValue rendered directly) */
 function Stat({
   label,
   value,

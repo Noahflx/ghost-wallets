@@ -57,24 +57,38 @@ export async function sendMagicLinkEmail(
     ? `This link will expire on ${new Date(options.expiresAt).toLocaleString()}.`
     : "This link will expire in 7 days."
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
-      <h2 style="margin-bottom: 16px;">You've received ${amount} ${tokenSymbol}!</h2>
-      <p style="margin-bottom: 16px;">
-        ${options.senderName ? `<strong>${options.senderName}</strong> sent you funds via Ghost Wallets.` : "You've been sent funds via Ghost Wallets."}
-      </p>
-      <p style="margin-bottom: 24px;">
-        Click the secure link below to claim your payment. You'll be taken to Ghost Wallets to complete the process.
-      </p>
-      <p style="margin-bottom: 24px;">
-        <a href="${magicLinkUrl}" style="display: inline-block; padding: 12px 20px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px;">
-          Claim your ${amount} ${tokenSymbol}
-        </a>
-      </p>
-      <p style="margin-bottom: 16px;">${expiresText}</p>
-      <p style="color: #64748b; font-size: 12px;">If you weren't expecting this email, you can safely ignore it.</p>
+    const html = `
+    <div style="background-color: #f8fafc; padding: 40px 0; font-family: Arial, sans-serif;">
+      <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden;">
+        <div style="text-align: center; padding: 32px 24px 16px;">
+          <img src="cid:logo" alt="Ghost Wallets" style="width: 64px; height: 64px; margin-bottom: 16px;" />
+          <h2 style="margin: 0; font-size: 22px; color: #0f172a;">You've received ${amount} ${tokenSymbol}!</h2>
+        </div>
+        <div style="padding: 0 24px 32px;">
+          <p style="margin-bottom: 16px; color: #334155; font-size: 15px;">
+            ${
+              options.senderName
+                ? `<strong>${options.senderName}</strong> sent you funds via Ghost Wallets.`
+                : "You've been sent funds via Ghost Wallets."
+            }
+          </p>
+          <p style="margin-bottom: 24px; color: #334155; font-size: 15px;">
+            Click the secure link below to claim your payment. You'll be taken to Ghost Wallets to complete the process.
+          </p>
+          <div style="text-align: center; margin-bottom: 32px;">
+            <a href="${magicLinkUrl}" 
+              style="display: inline-block; background-color: #a78fe0; color: #ffffff; text-decoration: none; 
+                     padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px;">
+              Claim your ${amount} ${tokenSymbol}
+            </a>
+          </div>
+          <p style="margin-bottom: 12px; color: #64748b; font-size: 13px;">${expiresText}</p>
+          <p style="color: #94a3b8; font-size: 12px;">If you weren't expecting this email, you can safely ignore it.</p>
+        </div>
+      </div>
     </div>
   `
+  
 
   const text = [
     options.senderName
