@@ -17,11 +17,12 @@ type FlowState = "loading" | "verify" | "claim" | "success" | "error"
 
 interface WalletData {
   walletAddress: string
-  contractAddress: string
+  contractAddress: string | null
   amount: string
   tokenSymbol: string
-  recipientEmail?: string
-  recipientPhone?: string
+  recipientEmail?: string | null
+  senderName?: string | null
+  expiresAt?: string | null
 }
 
 export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
@@ -53,7 +54,15 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
         return
       }
 
-      setWalletData(data)
+      setWalletData({
+        walletAddress: data.walletAddress,
+        contractAddress: data.contractAddress,
+        amount: data.amount,
+        tokenSymbol: data.tokenSymbol,
+        recipientEmail: data.recipientEmail,
+        senderName: data.senderName,
+        expiresAt: data.expiresAt,
+      })
       setFlowState("verify")
     } catch (error) {
       setErrorMessage("Failed to verify magic link")
@@ -212,8 +221,13 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
               {walletData.recipientEmail && (
                 <p className="text-sm text-muted-foreground mt-2">Sent to: {walletData.recipientEmail}</p>
               )}
-              {walletData.recipientPhone && (
-                <p className="text-sm text-muted-foreground mt-2">Sent to: {walletData.recipientPhone}</p>
+              {walletData.senderName && (
+                <p className="text-sm text-muted-foreground mt-1">From: {walletData.senderName}</p>
+              )}
+              {walletData.expiresAt && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Expires on {new Date(walletData.expiresAt).toLocaleString()}
+                </p>
               )}
             </div>
 

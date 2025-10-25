@@ -5,6 +5,7 @@ import {
   hashToken,
   isMagicLinkExpired,
 } from "./magic-link"
+import { markTransactionClaimed } from "./transactions"
 
 interface MagicLinkRecord {
   hashedToken: string
@@ -15,6 +16,10 @@ interface MagicLinkRecord {
   expiresAt: Date
   redeemed: boolean
   fundingTxHash?: string
+  contractAddress?: string
+  senderName?: string
+  magicLinkToken: string
+  redeemedAt?: Date
 }
 
 const MAGIC_LINK_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
@@ -116,7 +121,7 @@ export async function sendToGhostWallet(
   const server = getSorobanServer()
 
   if (!server) {
-    return `mock-tx-${Date.now().toString(16)}`
+    throw new Error("Soroban RPC server is not available")
   }
 
   try {
@@ -180,10 +185,7 @@ export async function sendPayment(
   const treasurySecret = process.env.STELLAR_TREASURY_SECRET_KEY
 
   if (!treasurySecret) {
-    console.warn(
-      "STELLAR_TREASURY_SECRET_KEY is not configured. Returning a mock transaction hash.",
-    )
-    return `mock-tx-${Date.now().toString(16)}`
+    throw new Error("STELLAR_TREASURY_SECRET_KEY environment variable is required to send payments")
   }
 
   try {
@@ -197,13 +199,26 @@ export async function sendPayment(
 /**
  * Generate a magic link for the recipient and store it in-memory until it is claimed or expires.
  */
+interface MagicLinkOptions {
+  contractAddress?: string
+  senderName?: string
+}
+
+export interface GeneratedMagicLink {
+  url: string
+  token: string
+  hashedToken: string
+  expiresAt: string
+}
+
 export async function generateMagicLink(
   recipient: string,
   walletAddress: string,
   amount: string,
   currency: string,
   fundingTxHash?: string,
-): Promise<string> {
+  options: MagicLinkOptions = {},
+): Promise<GeneratedMagicLink> {
   const token = generateMagicLinkToken()
   const hashedToken = hashToken(token)
   const expiresAt = new Date(Date.now() + MAGIC_LINK_EXPIRATION_MS)
@@ -217,9 +232,17 @@ export async function generateMagicLink(
     expiresAt,
     redeemed: false,
     fundingTxHash,
+    contractAddress: options.contractAddress,
+    senderName: options.senderName,
+    magicLinkToken: token,
   })
 
-  return createMagicLinkUrl(token)
+  return {
+    url: createMagicLinkUrl(token),
+    token,
+    hashedToken,
+    expiresAt: expiresAt.toISOString(),
+  }
 }
 
 export interface MagicLinkVerificationResult {
@@ -229,6 +252,8 @@ export interface MagicLinkVerificationResult {
   recipient: string
   expiresAt: string
   fundingTxHash?: string
+  contractAddress?: string
+  senderName?: string
 }
 
 /**
@@ -260,13 +285,24 @@ export async function verifyMagicLink(
     recipient: record.recipient,
     expiresAt: record.expiresAt.toISOString(),
     fundingTxHash: record.fundingTxHash,
+    contractAddress: record.contractAddress,
+    senderName: record.senderName,
   }
 }
 
 /**
  * Claim funds associated with a magic link token.
  */
-export async function claimFunds(token: string): Promise<{ txHash: string }> {
+export interface ClaimFundsResult {
+  txHash: string
+  walletAddress: string
+  amount: string
+  currency: string
+  recipient: string
+  contractAddress?: string
+}
+
+export async function claimFunds(token: string): Promise<ClaimFundsResult> {
   const hashedToken = hashToken(token)
   const record = magicLinkStore.get(hashedToken)
 
@@ -284,9 +320,21 @@ export async function claimFunds(token: string): Promise<{ txHash: string }> {
   }
 
   record.redeemed = true
+  record.redeemedAt = new Date()
   magicLinkStore.set(hashedToken, record)
 
-  const txHash = record.fundingTxHash ?? `mock-claim-${Date.now().toString(16)}`
+  if (!record.fundingTxHash) {
+    throw new Error("Funding transaction hash is not available for this claim")
+  }
 
-  return { txHash }
+  markTransactionClaimed(hashedToken, record.fundingTxHash)
+
+  return {
+    txHash: record.fundingTxHash,
+    walletAddress: record.walletAddress,
+    amount: record.amount,
+    currency: record.currency,
+    recipient: record.recipient,
+    contractAddress: record.contractAddress,
+  }
 }

@@ -8,15 +8,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, CheckCircle2, Mail, Phone } from "lucide-react"
+import { Loader2, CheckCircle2, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export function SendPaymentForm() {
-  const [recipientType, setRecipientType] = useState<"email" | "phone">("email")
   const [recipientEmail, setRecipientEmail] = useState("")
-  const [recipientPhone, setRecipientPhone] = useState("")
   const [amount, setAmount] = useState("")
   const [tokenSymbol, setTokenSymbol] = useState("USDC")
   const [senderName, setSenderName] = useState("")
@@ -31,14 +28,13 @@ export function SendPaymentForm() {
     setSuccess(false)
 
     try {
-      const response = await fetch("/api/send-payment", {
+      const response = await fetch("/api/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          recipientEmail: recipientType === "email" ? recipientEmail : undefined,
-          recipientPhone: recipientType === "phone" ? recipientPhone : undefined,
+          recipient: recipientEmail,
           amount,
-          tokenSymbol,
+          currency: tokenSymbol,
           senderName: senderName || undefined,
         }),
       })
@@ -58,7 +54,6 @@ export function SendPaymentForm() {
 
       // Reset form
       setRecipientEmail("")
-      setRecipientPhone("")
       setAmount("")
       setSenderName("")
     } catch (error) {
@@ -99,51 +94,24 @@ export function SendPaymentForm() {
     <Card>
       <CardHeader>
         <CardTitle>Send Payment</CardTitle>
-        <CardDescription>Enter recipient details and amount to send</CardDescription>
+        <CardDescription>Enter the recipient email and amount to send</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Recipient Type Tabs */}
-          <Tabs value={recipientType} onValueChange={(v) => setRecipientType(v as "email" | "phone")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="email" className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Email
-              </TabsTrigger>
-              <TabsTrigger value="phone" className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                Phone
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="email" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Recipient Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="recipient@example.com"
-                  value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                  required
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="phone" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Recipient Phone</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+1234567890"
-                  value={recipientPhone}
-                  onChange={(e) => setRecipientPhone(e.target.value)}
-                  required
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
+          <div className="space-y-2">
+            <Label htmlFor="email" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Recipient Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="recipient@example.com"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              required
+            />
+          </div>
 
           {/* Amount and Token */}
           <div className="grid grid-cols-2 gap-4">
@@ -190,7 +158,7 @@ export function SendPaymentForm() {
           {/* Info Alert */}
           <Alert>
             <AlertDescription className="text-sm leading-relaxed">
-              The recipient will receive a magic link to claim their funds. They don't need a crypto wallet to get
+              The recipient will receive a magic link at their email address. They don't need a crypto wallet to get
               started.
             </AlertDescription>
           </Alert>

@@ -1,79 +1,132 @@
 "use client"
 
+import { useEffect, useState } from "react"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowUpRight, Clock } from "lucide-react"
+import type { TransactionRecord } from "@/lib/transactions"
 
-// Mock data for demo
-const mockTransactions = [
-  {
-    id: "1",
-    recipient: "alice@example.com",
-    amount: "50.00",
-    token: "USDC",
-    status: "claimed",
-    timestamp: "2 hours ago",
-  },
-  {
-    id: "2",
-    recipient: "+1234567890",
-    amount: "100.00",
-    token: "PYUSD",
-    status: "pending",
-    timestamp: "5 hours ago",
-  },
-  {
-    id: "3",
-    recipient: "bob@example.com",
-    amount: "25.50",
-    token: "USDC",
-    status: "claimed",
-    timestamp: "1 day ago",
-  },
-]
+interface TransactionsResponse {
+  transactions: TransactionRecord[]
+}
+
+function formatTimestamp(timestamp: string): string {
+  try {
+    return new Date(timestamp).toLocaleString()
+  } catch (error) {
+    return timestamp
+  }
+}
 
 export function RecentTransactions() {
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadTransactions = async () => {
+      try {
+        const response = await fetch("/api/transactions")
+        const data = (await response.json()) as TransactionsResponse & { error?: string }
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "Unable to fetch transactions")
+        }
+
+        if (!cancelled) {
+          setTransactions(data.transactions)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load transactions")
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadTransactions()
+
+    const interval = setInterval(loadTransactions, 15000)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [])
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>Loading recent transactions...</p>
+        </div>
+      )
+    }
+
+    if (error) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>We couldn't load your transactions.</p>
+          <p className="text-sm mt-1">{error}</p>
+        </div>
+      )
+    }
+
+    if (transactions.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>No transactions yet</p>
+          <p className="text-sm mt-1">Send your first payment to get started</p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-4">
+        {transactions.map((tx) => (
+          <div key={tx.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <ArrowUpRight className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">{tx.recipient}</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatTimestamp(tx.createdAt)}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="font-semibold">
+                {tx.amount} {tx.currency}
+              </p>
+              <Badge
+                variant={tx.status === "claimed" ? "default" : tx.status === "failed" ? "destructive" : "secondary"}
+                className="mt-1"
+              >
+                {tx.status}
+              </Badge>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Recent Transactions</CardTitle>
         <CardDescription>Your recent payment activity</CardDescription>
       </CardHeader>
-      <CardContent>
-        {mockTransactions.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No transactions yet</p>
-            <p className="text-sm mt-1">Send your first payment to get started</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {mockTransactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <ArrowUpRight className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{tx.recipient}</p>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {tx.timestamp}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">
-                    {tx.amount} {tx.token}
-                  </p>
-                  <Badge variant={tx.status === "claimed" ? "default" : "secondary"} className="mt-1">
-                    {tx.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
+      <CardContent>{renderContent()}</CardContent>
     </Card>
   )
 }

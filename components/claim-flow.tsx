@@ -115,7 +115,7 @@ export function ClaimFlow({ token }: ClaimFlowProps) {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Verify Your Identity</CardTitle>
-          <CardDescription>Enter the verification code sent to your email or phone</CardDescription>
+          <CardDescription>Enter the verification code sent to your email</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleVerify} className="space-y-4">

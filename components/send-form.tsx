@@ -58,16 +58,16 @@ export function SendForm() {
     <Card>
       <CardHeader>
         <CardTitle>New Payment</CardTitle>
-        <CardDescription>Send crypto to any email or phone number</CardDescription>
+        <CardDescription>Send crypto to any email address</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="recipient">Recipient Email or Phone</Label>
+            <Label htmlFor="recipient">Recipient Email</Label>
             <Input
               id="recipient"
-              type="text"
-              placeholder="friend@example.com or +1234567890"
+              type="email"
+              placeholder="friend@example.com"
               value={recipient}
               onChange={(e) => setRecipient(e.target.value)}
               required

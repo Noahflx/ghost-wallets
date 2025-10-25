@@ -1,14 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createWallet, sendPayment, generateMagicLink } from "@/lib/stellar"
 import { sendNotification } from "@/lib/notifications"
+import { recordTransaction } from "@/lib/transactions"
 
 export async function POST(request: NextRequest) {
   try {
-    const { recipient, amount, currency } = await request.json()
+    const { recipient, amount, currency, senderName } = await request.json()
 
     // Validate input
     if (!recipient || !amount || !currency) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    if (!recipient.includes("@")) {
+      return NextResponse.json(
+        { error: "Email is required. SMS delivery is not supported." },
+        { status: 400 },
+      )
     }
 
     // Create a new smart wallet for the recipient
@@ -20,16 +28,35 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Payment sent, tx hash:", txHash)
 
     // Generate magic link for recipient
-    const magicLink = await generateMagicLink(recipient, wallet.address, amount, currency, txHash)
-    console.log("[v0] Generated magic link:", magicLink)
+    const magicLink = await generateMagicLink(recipient, wallet.address, amount, currency, txHash, {
+      contractAddress: wallet.contractAddress,
+      senderName,
+    })
+    console.log("[v0] Generated magic link:", magicLink.url)
 
-    // Send notification (email/SMS)
-    await sendNotification(recipient, magicLink, amount, currency)
+    recordTransaction({
+      recipient,
+      amount,
+      currency,
+      walletAddress: wallet.address,
+      transactionHash: txHash,
+      magicLinkUrl: magicLink.url,
+      magicLinkTokenHash: magicLink.hashedToken,
+      senderName,
+    })
+
+    // Send notification email
+    await sendNotification(recipient, magicLink.url, amount, currency, {
+      senderName,
+      expiresAt: magicLink.expiresAt,
+    })
 
     return NextResponse.json({
       success: true,
       walletAddress: wallet.address,
       transactionHash: txHash,
+      magicLinkUrl: magicLink.url,
+      magicLinkExpiresAt: magicLink.expiresAt,
     })
   } catch (error) {
     console.error("[v0] Error in send API:", error)

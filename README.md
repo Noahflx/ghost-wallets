@@ -1,14 +1,14 @@
 # Ghost Wallets
 
-Send crypto to anyone via email or phone number - no wallet required.
+Send crypto to anyone via email — no wallet required.
 
 ## Overview
 
-Ghost Wallets is a payment system built on Stellar that allows you to send USDC, PYUSD, or XLM to anyone using just their email or phone number. Recipients receive a magic link to claim their funds without needing a crypto wallet upfront.
+Ghost Wallets is a payment system built on Stellar that allows you to send USDC, PYUSD, or XLM to anyone using just their email address. Recipients receive a magic link to claim their funds without needing a crypto wallet upfront.
 
 ## Features
 
-- **Magic Link Payments**: Send crypto via email or phone number
+- **Magic Link Payments**: Send crypto via email
 - **Smart Contract Wallets**: Secure Soroban smart contracts for each payment
 - **No Wallet Required**: Recipients can claim funds with just a magic link
 - **Multiple Tokens**: Support for USDC, PYUSD, and XLM
@@ -44,7 +44,21 @@ npm install
 cp .env.example .env.local
 \`\`\`
 
-4. Build and deploy the smart contract:
+4. Configure required environment variables in `.env.local`:
+
+```env
+# Stellar treasury account secret key used to fund ghost wallets
+STELLAR_TREASURY_SECRET_KEY="${YOUR_TREASURY_SECRET}"
+
+# Gmail credentials used for sending magic link emails
+GMAIL_USER="noahef2030@gmail.com" # optional override
+GMAIL_APP_PASSWORD="${YOUR_GMAIL_APP_PASSWORD}"
+
+# Public URL for magic link generation (defaults to http://localhost:3000)
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+5. Build and deploy the smart contract:
 
 \`\`\`bash
 chmod +x scripts/build-contract.sh
@@ -54,13 +68,13 @@ chmod +x scripts/deploy-contract.sh
 ./scripts/deploy-contract.sh
 \`\`\`
 
-5. Run the development server:
+6. Run the development server:
 
 \`\`\`bash
 npm run dev
 \`\`\`
 
-6. Open [http://localhost:3000](http://localhost:3000)
+7. Open [http://localhost:3000](http://localhost:3000)
 
 ## Project Structure
 
@@ -77,13 +91,13 @@ npm run dev
 ├── lib/                  # Utility libraries
 │   ├── stellar.ts        # Stellar SDK utilities
 │   ├── magic-link.ts     # Magic link generation
-│   └── email.ts          # Email/SMS sending
+│   └── email.ts          # Gmail email sending
 └── scripts/              # Build and deployment scripts
 \`\`\`
 
 ## API Endpoints
 
-- `POST /api/send-payment` - Create a new payment and send magic link
+- `POST /api/send` - Create a new payment and send a magic link email
 - `POST /api/verify-magic-link` - Verify a magic link token
 - `POST /api/claim-wallet` - Claim a wallet and transfer ownership
 
