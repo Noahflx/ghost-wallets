@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowUpRight, Clock } from "lucide-react"
+import { ArrowUpRight, Clock, ExternalLink, Sparkles } from "lucide-react"
 import type { TransactionRecord } from "@/lib/transactions"
 
 interface TransactionsResponse {
@@ -17,6 +17,10 @@ function formatTimestamp(timestamp: string): string {
   } catch (error) {
     return timestamp
   }
+}
+
+function buildExplorerUrl(hash: string): string {
+  return `https://stellar.expert/explorer/testnet/tx/${hash}`
 }
 
 export function RecentTransactions() {
@@ -101,6 +105,11 @@ export function RecentTransactions() {
                   <Clock className="h-3 w-3" />
                   {formatTimestamp(tx.createdAt)}
                 </p>
+                {tx.claimedAt && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Claimed {formatTimestamp(tx.claimedAt)}
+                  </p>
+                )}
               </div>
             </div>
             <div className="text-right space-y-1">
@@ -116,6 +125,11 @@ export function RecentTransactions() {
                 <Badge variant={tx.isSimulated ? "outline" : "default"}>
                   {tx.isSimulated ? "Simulated" : "Testnet"}
                 </Badge>
+                {tx.prefundTransactionHash && (
+                  <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                    Friendbot
+                  </Badge>
+                )}
               </div>
               {tx.transactionHash && (
                 <div className="text-xs text-muted-foreground">
@@ -133,6 +147,20 @@ export function RecentTransactions() {
                   ) : (
                     <span title={tx.transactionHash}>Hash {tx.transactionHash.slice(0, 10)}…</span>
                   )}
+                </div>
+              )}
+              {tx.prefundTransactionHash && (
+                <div className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  <a
+                    href={buildExplorerUrl(tx.prefundTransactionHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    Prefund
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
                 </div>
               )}
             </div>

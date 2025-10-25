@@ -82,6 +82,8 @@ const RPC_URL = process.env.STELLAR_RPC_URL || "https://soroban-testnet.stellar.
 const NETWORK_PASSPHRASE = Networks.TESTNET
 const PAYMENT_MODE =
   (process.env.STELLAR_PAYMENT_MODE?.toLowerCase() as PaymentMode | undefined) || "simulation"
+const PREFUND_WITH_FRIENDBOT = process.env.STELLAR_PREFUND_WALLETS === "true"
+const FRIENDBOT_URL_BASE = (process.env.STELLAR_FRIENDBOT_URL || "https://friendbot.stellar.org").replace(/\/$/, "")
 
 let cachedServer: SorobanRpc.Server | null | undefined
 
@@ -113,6 +115,12 @@ export interface WalletInfo {
   contractAddress: string
 }
 
+export interface PrefundMetadata {
+  txHash: string
+  ledger?: number
+  fundedAt: string
+}
+
 /**
  * Create a new Stellar keypair for a ghost wallet
  */
@@ -138,6 +146,57 @@ export async function deployGhostWallet(ownerPublicKey: string, recoveryEmail: s
   // 2. Calling initialize(owner, recovery_email)
 
   return contractId
+}
+
+interface FriendbotSuccessResponse {
+  hash?: string
+  ledger?: number
+}
+
+const friendbotCache = new Map<string, PrefundMetadata>()
+
+async function prefundWithFriendbot(publicKey: string): Promise<PrefundMetadata | null> {
+  const shouldPrefund = PAYMENT_MODE === "testnet" || PREFUND_WITH_FRIENDBOT
+
+  if (!shouldPrefund) {
+    return null
+  }
+
+  if (friendbotCache.has(publicKey)) {
+    return friendbotCache.get(publicKey) ?? null
+  }
+
+  try {
+    const response = await fetch(`${FRIENDBOT_URL_BASE}?addr=${encodeURIComponent(publicKey)}`)
+
+    if (!response.ok) {
+      console.warn(`Friendbot funding failed with status ${response.status}. Continuing without prefund.`)
+      return null
+    }
+
+    const payload = (await response.json()) as FriendbotSuccessResponse | { error?: string }
+
+    if (typeof (payload as FriendbotSuccessResponse).hash === "string") {
+      const fundedAt = new Date().toISOString()
+      const metadata: PrefundMetadata = {
+        txHash: (payload as FriendbotSuccessResponse).hash!,
+        ledger:
+          typeof (payload as FriendbotSuccessResponse).ledger === "number"
+            ? (payload as FriendbotSuccessResponse).ledger
+            : undefined,
+        fundedAt,
+      }
+
+      friendbotCache.set(publicKey, metadata)
+      return metadata
+    }
+
+    console.warn("Friendbot response did not contain a transaction hash. Payload:", payload)
+  } catch (error) {
+    console.warn("Friendbot funding attempt failed. Proceeding without prefund.", error)
+  }
+
+  return null
 }
 
 /**
@@ -202,6 +261,7 @@ export interface CreatedWallet {
   address: string
   secretKey: string
   contractAddress: string
+  prefund?: PrefundMetadata | null
 }
 
 /**
@@ -210,11 +270,13 @@ export interface CreatedWallet {
 export async function createWallet(recipient: string): Promise<CreatedWallet> {
   const { publicKey, secretKey } = createWalletKeypair()
   const contractAddress = await deployGhostWallet(publicKey, recipient)
+  const prefund = await prefundWithFriendbot(publicKey)
 
   return {
     address: publicKey,
     secretKey,
     contractAddress,
+    prefund,
   }
 }
 

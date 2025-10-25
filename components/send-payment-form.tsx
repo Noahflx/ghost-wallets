@@ -9,11 +9,22 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, CheckCircle2, Mail } from "lucide-react"
+import { Loader2, CheckCircle2, Mail, ExternalLink } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import type { PaymentMode } from "@/lib/types/payments"
 
 type SendPaymentFormProps = {
   onSend?: (amount: number) => void
+}
+
+interface PaymentSuccessDetails {
+  walletAddress: string
+  transactionHash: string | null
+  magicLinkUrl: string
+  paymentMode: PaymentMode
+  explorerUrl: string | null
+  simulated: boolean
+  prefundHash: string | null
 }
 
 export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
@@ -24,12 +35,14 @@ export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [magicLinkUrl, setMagicLinkUrl] = useState("")
+  const [paymentDetails, setPaymentDetails] = useState<PaymentSuccessDetails | null>(null)
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setSuccess(false)
+    setPaymentDetails(null)
 
     try {
       const response = await fetch("/api/send", {
@@ -51,6 +64,15 @@ export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
 
       setSuccess(true)
       setMagicLinkUrl(data.magicLinkUrl)
+      setPaymentDetails({
+        walletAddress: data.walletAddress,
+        transactionHash: data.transactionHash ?? null,
+        magicLinkUrl: data.magicLinkUrl,
+        paymentMode: data.paymentMode as PaymentMode,
+        explorerUrl: data.explorerUrl ?? null,
+        simulated: Boolean(data.simulated),
+        prefundHash: data?.prefund?.txHash ?? null,
+      })
       onSend?.(Number(amount))
       toast({
         title: "Payment sent!",
@@ -87,7 +109,51 @@ export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
             <Label className="text-sm text-muted-foreground">Magic Link</Label>
             <div className="mt-1 p-3 bg-muted rounded-lg break-all text-sm font-mono">{magicLinkUrl}</div>
           </div>
-          <Button onClick={() => setSuccess(false)} className="w-full">
+          {paymentDetails && (
+            <div className="grid gap-4 rounded-lg border border-border/40 p-4 bg-muted/30 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Funding mode</span>
+                <span className="font-medium uppercase tracking-wide text-xs">
+                  {paymentDetails.paymentMode === "testnet" ? "Testnet" : "Simulation"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Wallet address</span>
+                <span className="font-mono text-xs">{paymentDetails.walletAddress}</span>
+              </div>
+              {paymentDetails.transactionHash && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Funding hash</span>
+                  {paymentDetails.explorerUrl ? (
+                    <a
+                      href={paymentDetails.explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:underline"
+                    >
+                      {paymentDetails.transactionHash.slice(0, 12)}…
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="font-mono text-xs">{paymentDetails.transactionHash}</span>
+                  )}
+                </div>
+              )}
+              {paymentDetails.prefundHash && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Friendbot prefund</span>
+                  <span className="font-mono text-xs">{paymentDetails.prefundHash.slice(0, 12)}…</span>
+                </div>
+              )}
+            </div>
+          )}
+          <Button
+            onClick={() => {
+              setSuccess(false)
+              setPaymentDetails(null)
+            }}
+            className="w-full"
+          >
             Send Another Payment
           </Button>
         </CardContent>

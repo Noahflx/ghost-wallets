@@ -133,6 +133,9 @@ export async function POST(request: NextRequest) {
       fundingMode: paymentResult.mode,
       explorerUrl: paymentResult.explorerUrl,
       isSimulated: paymentResult.isSimulated,
+      prefundTransactionHash: wallet.prefund?.txHash,
+      prefundLedger: wallet.prefund?.ledger,
+      prefundedAt: wallet.prefund?.fundedAt,
     })
 
     // Send notification email
@@ -152,6 +155,7 @@ export async function POST(request: NextRequest) {
       paymentMode: paymentResult.mode,
       explorerUrl: paymentResult.explorerUrl ?? null,
       simulated: paymentResult.isSimulated,
+      prefund: wallet.prefund ?? null,
     })
   } catch (error) {
     console.error("[v0] Error in send API:", error)
