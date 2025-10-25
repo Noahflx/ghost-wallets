@@ -70,6 +70,8 @@ export async function sendMagicLinkEmail(
       ? options.explorerUrl
         ? `This transfer executed on the Stellar testnet. You can verify the transaction <a href="${options.explorerUrl}" style="color: #6366f1;">on Stellar Expert</a>.`
         : "This transfer executed on the Stellar testnet."
+      : fundingMode === "sandbox"
+      ? "This transfer executed against a local Soroban sandbox you control."
       : "This transfer was simulated for the demo environment—no real funds moved yet."
 
   const complianceNote =

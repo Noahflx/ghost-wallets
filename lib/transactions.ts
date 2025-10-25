@@ -57,14 +57,19 @@ interface PersistedTransactionRecord extends TransactionRecord {}
 
 function hydrateTransactionStore(): Map<string, TransactionRecord> {
   const persisted = readJsonFile<Record<string, PersistedTransactionRecord>>(TRANSACTIONS_FILENAME, {})
-  const entries = Object.entries(persisted).map<[string, TransactionRecord]>(([key, record]) => [
-    key,
-    {
-      ...record,
-      fundingMode: record.fundingMode ?? "simulation",
-      isSimulated: record.isSimulated ?? record.fundingMode !== "testnet",
-    },
-  ])
+  const entries = Object.entries(persisted).map<[string, TransactionRecord]>(([key, record]) => {
+    const fundingMode = record.fundingMode ?? "simulation"
+    const isSimulated = record.isSimulated ?? fundingMode === "simulation"
+
+    return [
+      key,
+      {
+        ...record,
+        fundingMode,
+        isSimulated,
+      },
+    ]
+  })
 
   return new Map<string, TransactionRecord>(entries)
 }

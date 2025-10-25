@@ -83,12 +83,20 @@ npm run dev
 
 ### Judge-friendly payment modes
 
-Ghost Wallets now ships with two safe execution paths so you can demo end-to-end flows without risking real funds:
+Ghost Wallets now ships with three safe execution paths so you can demo end-to-end flows without risking real funds:
 
 - **Simulation (default)** – Payments are mocked locally, transaction hashes are deterministically generated, and the dashboard clearly labels activity as “Simulated.” Use this for fast iteration or when you cannot fund a treasury account. A JSON snapshot is persisted to `data/magic-links.json` so links survive server restarts during judging.
 - **Stellar testnet** – Set `STELLAR_PAYMENT_MODE=testnet` and provide `STELLAR_TREASURY_SECRET_KEY`. Transfers are submitted to Soroban RPC, explorer links are surfaced in the UI/email, and recipients can verify hashes on Stellar Expert—still using play money from Friendbot. Enable `STELLAR_PREFUND_WALLETS=true` to auto-call Friendbot for each generated ghost wallet so the dashboard shows a real transaction hash before the claim step.
+- **Soroban sandbox** – Set `STELLAR_PAYMENT_MODE=sandbox` and run `./scripts/run-sandbox.sh` in a separate terminal. The backend will deploy a fresh contract per recipient with the Soroban CLI, fund wallets through the sandbox Friendbot, and submit payments to `http://localhost:8000/soroban/rpc`.
 
-When testnet submission fails (e.g., RPC outage or unsupported asset), the API gracefully falls back to simulation and records the attempt so judges can continue the journey.
+When network submission fails (e.g., RPC outage or unsupported asset), the API gracefully falls back to simulation and records the attempt so judges can continue the journey.
+
+### Local sandbox quickstart
+
+1. Ensure the Soroban CLI is installed and available on your `PATH`.
+2. Build the contract: `./scripts/build-contract.sh`.
+3. In a dedicated terminal, run `./scripts/run-sandbox.sh` to start the local RPC server and Friendbot.
+4. Export `STELLAR_PAYMENT_MODE=sandbox` (and optionally `STELLAR_TREASURY_SECRET_KEY`) when starting the Next.js dev server so payments route through the sandbox.
 
 ### Reliability & recovery story
 
@@ -182,8 +190,10 @@ This project is optimized for deployment on Vercel:
 - `STELLAR_RPC_URL` - Stellar RPC endpoint
 - `GHOST_WALLET_CONTRACT_ID` - Deployed contract ID
 - `NEXT_PUBLIC_APP_URL` - Application URL
-- `STELLAR_PAYMENT_MODE` - Either `simulation` (default) or `testnet`
-- `STELLAR_TREASURY_SECRET_KEY` - Required when `STELLAR_PAYMENT_MODE=testnet`
+- `STELLAR_PAYMENT_MODE` - Either `simulation` (default), `testnet`, or `sandbox`
+- `STELLAR_TREASURY_SECRET_KEY` - Required when `STELLAR_PAYMENT_MODE` is `testnet` or `sandbox`
+- `SOROBAN_SANDBOX_IDENTITY` - Soroban CLI identity used for sandbox deployments (defaults to `default`)
+- `GHOST_WALLET_WASM_PATH` - Override the path to the compiled Ghost Wallet WASM when deploying in sandbox mode
 - `NEXT_PUBLIC_MAX_SEND_AMOUNT` - Upper bound enforced by the `/api/send` route (defaults to 10,000)
 
 ## License

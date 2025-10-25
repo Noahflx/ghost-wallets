@@ -1,5 +1,8 @@
 import { Keypair, SorobanRpc, TransactionBuilder, Networks, Operation, Asset, BASE_FEE } from "@stellar/stellar-sdk"
 import { createHash, randomBytes } from "crypto"
+import { execFile } from "child_process"
+import { promisify } from "util"
+import { access } from "fs/promises"
 import {
   createMagicLinkUrl,
   generateMagicLinkToken,
@@ -30,8 +33,15 @@ interface MagicLinkRecord {
   claimedBy?: string
 }
 
+const execFileAsync = promisify(execFile)
+
 const MAGIC_LINK_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 const MAGIC_LINKS_FILENAME = "magic-links.json"
+
+const DEFAULT_TESTNET_RPC_URL = "https://soroban-testnet.stellar.org"
+const DEFAULT_SANDBOX_RPC_URL = "http://localhost:8000/soroban/rpc"
+const DEFAULT_SANDBOX_FRIENDBOT_URL = "http://localhost:8000/friendbot"
+const SANDBOX_NETWORK_PASSPHRASE = "Standalone Network ; February 2017"
 
 interface PersistedMagicLinkRecord
   extends Omit<MagicLinkRecord, "expiresAt" | "redeemedAt"> {
@@ -80,14 +90,40 @@ function persistMagicLinkStore() {
   writeJsonFile(MAGIC_LINKS_FILENAME, serializable)
 }
 
-const RPC_URL = process.env.STELLAR_RPC_URL || "https://soroban-testnet.stellar.org"
-const NETWORK_PASSPHRASE = Networks.TESTNET
 const PAYMENT_MODE =
   (process.env.STELLAR_PAYMENT_MODE?.toLowerCase() as PaymentMode | undefined) || "simulation"
+const RPC_URL =
+  process.env.STELLAR_RPC_URL ||
+  (PAYMENT_MODE === "sandbox" ? DEFAULT_SANDBOX_RPC_URL : DEFAULT_TESTNET_RPC_URL)
+const NETWORK_PASSPHRASE = PAYMENT_MODE === "sandbox" ? SANDBOX_NETWORK_PASSPHRASE : Networks.TESTNET
 const PREFUND_WITH_FRIENDBOT = process.env.STELLAR_PREFUND_WALLETS === "true"
-const FRIENDBOT_URL_BASE = (process.env.STELLAR_FRIENDBOT_URL || "https://friendbot.stellar.org").replace(/\/$/, "")
+const FRIENDBOT_URL_BASE = (
+  process.env.STELLAR_FRIENDBOT_URL ||
+  (PAYMENT_MODE === "sandbox" ? DEFAULT_SANDBOX_FRIENDBOT_URL : "https://friendbot.stellar.org")
+).replace(/\/$/, "")
+const SOROBAN_CLI = process.env.SOROBAN_CLI_PATH || "soroban"
+const SANDBOX_IDENTITY = process.env.SOROBAN_SANDBOX_IDENTITY || "default"
+const SANDBOX_WASM_PATH =
+  process.env.GHOST_WALLET_WASM_PATH ||
+  "contracts/ghost-wallet/target/wasm32-unknown-unknown/release/ghost_wallet.optimized.wasm"
 
 let cachedServer: SorobanRpc.Server | null | undefined
+
+const CONTRACT_ID_REGEX = /C[0-9A-Z]{55}/
+
+async function runSorobanCommand(args: string[]): Promise<string> {
+  const { stdout } = await execFileAsync(SOROBAN_CLI, args, {
+    env: process.env,
+    maxBuffer: 10 * 1024 * 1024,
+  })
+
+  return stdout.trim()
+}
+
+function parseContractId(output: string): string | null {
+  const match = output.match(CONTRACT_ID_REGEX)
+  return match ? match[0] : null
+}
 
 function getSorobanServer(): SorobanRpc.Server | null {
   if (cachedServer !== undefined) {
@@ -138,16 +174,70 @@ export function createWalletKeypair(): { publicKey: string; secretKey: string } 
  * Deploy a new ghost wallet contract instance
  */
 export async function deployGhostWallet(ownerPublicKey: string, recoveryEmail: string): Promise<string> {
-  // In production, this would deploy a new contract instance
-  // For now, we'll return a mock contract address
-  const contractId = process.env.GHOST_WALLET_CONTRACT_ID || "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
+  const fallbackContractId =
+    process.env.GHOST_WALLET_CONTRACT_ID || "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
 
-  // TODO: Implement actual contract deployment and initialization
-  // This would involve:
-  // 1. Deploying the contract WASM
-  // 2. Calling initialize(owner, recovery_email)
+  if (PAYMENT_MODE !== "sandbox") {
+    return fallbackContractId
+  }
 
-  return contractId
+  try {
+    await access(SANDBOX_WASM_PATH)
+  } catch (error) {
+    console.warn(
+      "Sandbox deployment requested but the Ghost Wallet WASM was not found at",
+      SANDBOX_WASM_PATH,
+      "- falling back to the configured contract id.",
+      error,
+    )
+    return fallbackContractId
+  }
+
+  try {
+    const deployOutput = await runSorobanCommand([
+      "contract",
+      "deploy",
+      "--wasm",
+      SANDBOX_WASM_PATH,
+      "--rpc-url",
+      RPC_URL,
+      "--network-passphrase",
+      NETWORK_PASSPHRASE,
+      "--source",
+      SANDBOX_IDENTITY,
+    ])
+
+    const deployedContractId = parseContractId(deployOutput) ?? deployOutput.split(/\s+/).pop() ?? ""
+
+    if (!CONTRACT_ID_REGEX.test(deployedContractId)) {
+      throw new Error(`Unable to determine contract id from Soroban CLI output: ${deployOutput}`)
+    }
+
+    await runSorobanCommand([
+      "contract",
+      "invoke",
+      "--id",
+      deployedContractId,
+      "--rpc-url",
+      RPC_URL,
+      "--network-passphrase",
+      NETWORK_PASSPHRASE,
+      "--source",
+      SANDBOX_IDENTITY,
+      "--fn",
+      "initialize",
+      "--",
+      "--owner",
+      ownerPublicKey,
+      "--recovery_email",
+      recoveryEmail,
+    ])
+
+    return deployedContractId
+  } catch (error) {
+    console.warn("Failed to deploy ghost wallet contract to the local sandbox. Using fallback contract id.", error)
+    return fallbackContractId
+  }
 }
 
 interface FriendbotSuccessResponse {
@@ -158,7 +248,8 @@ interface FriendbotSuccessResponse {
 const friendbotCache = new Map<string, PrefundMetadata>()
 
 async function prefundWithFriendbot(publicKey: string): Promise<PrefundMetadata | null> {
-  const shouldPrefund = PAYMENT_MODE === "testnet" || PREFUND_WITH_FRIENDBOT
+  const shouldPrefund =
+    PAYMENT_MODE === "testnet" || PAYMENT_MODE === "sandbox" || PREFUND_WITH_FRIENDBOT
 
   if (!shouldPrefund) {
     return null
@@ -349,28 +440,29 @@ export async function sendPayment(
   amount: string,
   currency: string,
 ): Promise<PaymentResult> {
-  if (PAYMENT_MODE === "testnet") {
+  if (PAYMENT_MODE === "testnet" || PAYMENT_MODE === "sandbox") {
     const treasurySecret = process.env.STELLAR_TREASURY_SECRET_KEY
+    const networkLabel = PAYMENT_MODE === "testnet" ? "Stellar testnet" : "Soroban sandbox"
 
     if (!treasurySecret) {
       console.warn(
-        "STELLAR_PAYMENT_MODE is set to testnet but STELLAR_TREASURY_SECRET_KEY is not configured. Falling back to simulation.",
+        `STELLAR_PAYMENT_MODE is set to ${PAYMENT_MODE} but STELLAR_TREASURY_SECRET_KEY is not configured. Falling back to simulation.`,
       )
     } else if (currency !== "XLM") {
       console.warn(
-        `Testnet mode currently supports XLM payments only. Received ${currency}. Falling back to simulation.`,
+        `${networkLabel} mode currently supports XLM payments only. Received ${currency}. Falling back to simulation.`,
       )
     } else {
       try {
         const txHash = await sendToGhostWallet(treasurySecret, walletAddress, amount, currency)
         return {
           txHash,
-          mode: "testnet",
+          mode: PAYMENT_MODE,
           isSimulated: false,
-          explorerUrl: buildExplorerUrl(txHash, "testnet"),
+          explorerUrl: buildExplorerUrl(txHash, PAYMENT_MODE),
         }
       } catch (error) {
-        console.error("Failed to submit payment on the Stellar testnet. Falling back to simulation.", error)
+        console.error(`Failed to submit payment on the ${networkLabel}. Falling back to simulation.`, error)
       }
     }
   }
@@ -529,14 +621,14 @@ export async function claimFunds(token: string, destinationAddress?: string): Pr
   let claimTxHash: string
   let explorerUrl = record.explorerUrl
 
-  if (record.fundingMode === "testnet") {
+  if (record.fundingMode === "testnet" || record.fundingMode === "sandbox") {
     if (!record.walletSecret) {
       throw new Error("Unable to access the temporary wallet required to complete this claim")
     }
 
     try {
       claimTxHash = await sendToGhostWallet(record.walletSecret, claimDestination, record.amount, record.currency)
-      explorerUrl = buildExplorerUrl(claimTxHash, "testnet")
+      explorerUrl = buildExplorerUrl(claimTxHash, record.fundingMode)
     } catch (error) {
       console.error("Failed to transfer funds from ghost wallet:", error)
       throw new Error("Failed to transfer funds to the provided Stellar address")
