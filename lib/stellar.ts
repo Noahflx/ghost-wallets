@@ -14,6 +14,7 @@ import type { PaymentMetadata } from "./types/payments"
 interface MagicLinkRecord {
   hashedToken: string
   walletAddress: string
+  walletSecret?: string
   recipient: string
   amount: string
   currency: string
@@ -26,6 +27,7 @@ interface MagicLinkRecord {
   redeemedAt?: Date
   fundingMode: PaymentMode
   explorerUrl?: string
+  claimedBy?: string
 }
 
 const MAGIC_LINK_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
@@ -320,6 +322,28 @@ function simulatePayment(
   }
 }
 
+function simulateClaimTransfer(
+  sourceWallet: string,
+  destinationWallet: string,
+  amount: string,
+  currency: string,
+): string {
+  return createHash("sha256")
+    .update("claim")
+    .update(":")
+    .update(sourceWallet)
+    .update(":")
+    .update(destinationWallet)
+    .update(":")
+    .update(amount)
+    .update(":")
+    .update(currency)
+    .update(":")
+    .update(Date.now().toString())
+    .update(randomBytes(16))
+    .digest("hex")
+}
+
 export async function sendPayment(
   walletAddress: string,
   amount: string,
@@ -376,7 +400,7 @@ export interface GeneratedMagicLink {
 
 export async function generateMagicLink(
   recipient: string,
-  walletAddress: string,
+  wallet: Pick<CreatedWallet, "address" | "secretKey">,
   amount: string,
   currency: string,
   fundingTxHash?: string,
@@ -387,10 +411,13 @@ export async function generateMagicLink(
   const expiresAt = new Date(Date.now() + MAGIC_LINK_EXPIRATION_MS)
 
   const fundingMode = options.fundingMode ?? PAYMENT_MODE
+  const walletAddress = wallet.address
+  const walletSecret = wallet.secretKey
 
   magicLinkStore.set(hashedToken, {
     hashedToken,
     walletAddress,
+    walletSecret,
     recipient,
     amount,
     currency,
@@ -476,9 +503,10 @@ export interface ClaimFundsResult {
   contractAddress?: string
   fundingMode: PaymentMode
   explorerUrl?: string
+  claimedBy?: string
 }
 
-export async function claimFunds(token: string): Promise<ClaimFundsResult> {
+export async function claimFunds(token: string, destinationAddress?: string): Promise<ClaimFundsResult> {
   const hashedToken = hashToken(token)
   const record = magicLinkStore.get(hashedToken)
 
@@ -495,25 +523,45 @@ export async function claimFunds(token: string): Promise<ClaimFundsResult> {
     throw new Error("Magic link has expired")
   }
 
+  const trimmedDestination = destinationAddress?.trim()
+  const claimDestination = trimmedDestination && trimmedDestination.length > 0 ? trimmedDestination : record.walletAddress
+
+  let claimTxHash: string
+  let explorerUrl = record.explorerUrl
+
+  if (record.fundingMode === "testnet") {
+    if (!record.walletSecret) {
+      throw new Error("Unable to access the temporary wallet required to complete this claim")
+    }
+
+    try {
+      claimTxHash = await sendToGhostWallet(record.walletSecret, claimDestination, record.amount, record.currency)
+      explorerUrl = buildExplorerUrl(claimTxHash, "testnet")
+    } catch (error) {
+      console.error("Failed to transfer funds from ghost wallet:", error)
+      throw new Error("Failed to transfer funds to the provided Stellar address")
+    }
+  } else {
+    claimTxHash = simulateClaimTransfer(record.walletAddress, claimDestination, record.amount, record.currency)
+  }
+
   record.redeemed = true
   record.redeemedAt = new Date()
+  record.claimedBy = claimDestination
   magicLinkStore.set(hashedToken, record)
   persistMagicLinkStore()
 
-  if (!record.fundingTxHash) {
-    throw new Error("Funding transaction hash is not available for this claim")
-  }
-
-  markTransactionClaimed(hashedToken, record.fundingTxHash)
+  markTransactionClaimed(hashedToken, claimTxHash, claimDestination)
 
   return {
-    txHash: record.fundingTxHash,
+    txHash: claimTxHash,
     walletAddress: record.walletAddress,
     amount: record.amount,
     currency: record.currency,
     recipient: record.recipient,
     contractAddress: record.contractAddress,
     fundingMode: record.fundingMode,
-    explorerUrl: record.explorerUrl,
+    explorerUrl,
+    claimedBy: claimDestination,
   }
 }

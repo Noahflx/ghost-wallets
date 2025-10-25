@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     // Generate magic link for recipient
     const magicLink = await generateMagicLink(
       sanitizedRecipient,
-      wallet.address,
+      wallet,
       normalizedAmount,
       normalizedCurrency,
       paymentResult.txHash,

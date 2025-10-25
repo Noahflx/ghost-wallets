@@ -26,6 +26,7 @@ export interface TransactionRecord {
   prefundTransactionHash?: string
   prefundLedger?: number
   prefundedAt?: string
+  claimedBy?: string
 }
 
 interface RecordTransactionInput {
@@ -43,6 +44,7 @@ interface RecordTransactionInput {
   prefundTransactionHash?: string
   prefundLedger?: number
   prefundedAt?: string
+  claimedBy?: string
 }
 
 const globalStores = globalThis as typeof globalThis & {
@@ -107,6 +109,7 @@ export function recordTransaction(input: RecordTransactionInput): TransactionRec
     prefundTransactionHash: input.prefundTransactionHash,
     prefundLedger: input.prefundLedger,
     prefundedAt: input.prefundedAt,
+    claimedBy: input.claimedBy,
   }
 
   transactionStore.set(input.magicLinkTokenHash, record)
@@ -117,6 +120,7 @@ export function recordTransaction(input: RecordTransactionInput): TransactionRec
 export function markTransactionClaimed(
   magicLinkTokenHash: string,
   claimTransactionHash?: string,
+  claimedBy?: string,
 ): TransactionRecord | null {
   const existing = transactionStore.get(magicLinkTokenHash)
 
@@ -131,6 +135,7 @@ export function markTransactionClaimed(
     claimedAt,
     updatedAt: claimedAt,
     claimTransactionHash: claimTransactionHash ?? existing.claimTransactionHash,
+    claimedBy: claimedBy ?? existing.claimedBy,
   }
 
   transactionStore.set(magicLinkTokenHash, updatedRecord)
