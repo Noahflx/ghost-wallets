@@ -1,4 +1,4 @@
-export type PaymentMode = "simulation" | "testnet"
+export type PaymentMode = "simulation" | "testnet" | "sandbox"
 
 export interface PaymentMetadata {
   mode: PaymentMode

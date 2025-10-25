@@ -19,8 +19,28 @@ function formatTimestamp(timestamp: string): string {
   }
 }
 
-function buildExplorerUrl(hash: string): string {
-  return `https://stellar.expert/explorer/testnet/tx/${hash}`
+function getFundingBadgeLabel(tx: TransactionRecord): string {
+  if (tx.isSimulated) {
+    return "Simulated"
+  }
+
+  if (tx.fundingMode === "sandbox") {
+    return "Sandbox"
+  }
+
+  return "Testnet"
+}
+
+function getFundingBadgeVariant(tx: TransactionRecord): "default" | "outline" | "secondary" {
+  if (tx.isSimulated) {
+    return "outline"
+  }
+
+  if (tx.fundingMode === "sandbox") {
+    return "secondary"
+  }
+
+  return "default"
 }
 
 export function RecentTransactions() {
@@ -122,9 +142,7 @@ export function RecentTransactions() {
                 >
                   {tx.status}
                 </Badge>
-                <Badge variant={tx.isSimulated ? "outline" : "default"}>
-                  {tx.isSimulated ? "Simulated" : "Testnet"}
-                </Badge>
+                <Badge variant={getFundingBadgeVariant(tx)}>{getFundingBadgeLabel(tx)}</Badge>
                 {tx.prefundTransactionHash && (
                   <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
                     Friendbot
@@ -152,15 +170,19 @@ export function RecentTransactions() {
               {tx.prefundTransactionHash && (
                 <div className="text-xs text-muted-foreground flex items-center justify-end gap-1">
                   <Sparkles className="h-3 w-3" />
-                  <a
-                    href={buildExplorerUrl(tx.prefundTransactionHash)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-primary hover:underline"
-                  >
-                    Prefund
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+                  {tx.fundingMode === "testnet" ? (
+                    <a
+                      href={`https://stellar.expert/explorer/testnet/tx/${tx.prefundTransactionHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      Prefund
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="font-mono">{tx.prefundTransactionHash.slice(0, 12)}…</span>
+                  )}
                 </div>
               )}
             </div>
