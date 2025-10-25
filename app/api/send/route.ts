@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Payment sent, tx hash:", txHash)
 
     // Generate magic link for recipient
-    const magicLink = await generateMagicLink(recipient, wallet.address, amount, currency)
+    const magicLink = await generateMagicLink(recipient, wallet.address, amount, currency, txHash)
     console.log("[v0] Generated magic link:", magicLink)
 
     // Send notification (email/SMS)
