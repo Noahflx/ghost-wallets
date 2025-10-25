@@ -14,6 +14,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "latest",
     "@stellar/stellar-sdk": "latest",
+    "@vercel/analytics": "^1.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "crypto": "latest",
@@ -28,12 +29,14 @@
     "tw-animate-css": "latest"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.16",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
-    "postcss": "^8.5",
-    "tailwindcss": "4.1.16",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.16",
     "typescript": "^5"
   }
 }
