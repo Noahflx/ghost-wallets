@@ -1,5 +1,8 @@
 import crypto from "crypto"
 
+import { readJsonFile, writeJsonFile } from "./storage/filesystem"
+import type { PaymentMode } from "./types/payments"
+
 export type TransactionStatus = "sent" | "claimed" | "failed"
 
 export interface TransactionRecord {
@@ -17,6 +20,9 @@ export interface TransactionRecord {
   updatedAt: string
   claimedAt?: string
   claimTransactionHash?: string
+  fundingMode: PaymentMode
+  explorerUrl?: string
+  isSimulated: boolean
 }
 
 interface RecordTransactionInput {
@@ -28,17 +34,48 @@ interface RecordTransactionInput {
   magicLinkUrl: string
   magicLinkTokenHash: string
   senderName?: string
+  fundingMode: PaymentMode
+  explorerUrl?: string
+  isSimulated: boolean
 }
 
 const globalStores = globalThis as typeof globalThis & {
   __transactionStore?: Map<string, TransactionRecord>
 }
 
+const TRANSACTIONS_FILENAME = "transactions.json"
+
+interface PersistedTransactionRecord extends TransactionRecord {}
+
+function hydrateTransactionStore(): Map<string, TransactionRecord> {
+  const persisted = readJsonFile<Record<string, PersistedTransactionRecord>>(TRANSACTIONS_FILENAME, {})
+  const entries = Object.entries(persisted).map<[string, TransactionRecord]>(([key, record]) => [
+    key,
+    {
+      ...record,
+      fundingMode: record.fundingMode ?? "simulation",
+      isSimulated: record.isSimulated ?? record.fundingMode !== "testnet",
+    },
+  ])
+
+  return new Map<string, TransactionRecord>(entries)
+}
+
 const transactionStore =
-  globalStores.__transactionStore ?? new Map<string, TransactionRecord>()
+  globalStores.__transactionStore ?? hydrateTransactionStore()
 
 if (!globalStores.__transactionStore) {
   globalStores.__transactionStore = transactionStore
+}
+
+function persistTransactionStore() {
+  const serializable: Record<string, PersistedTransactionRecord> = {}
+
+  for (const [key, record] of transactionStore.entries()) {
+    serializable[key] = record
+  }
+
+  writeJsonFile(TRANSACTIONS_FILENAME, serializable)
 }
 
 export function recordTransaction(input: RecordTransactionInput): TransactionRecord {
@@ -58,9 +95,13 @@ export function recordTransaction(input: RecordTransactionInput): TransactionRec
     senderName: input.senderName,
     createdAt: timestamp,
     updatedAt: timestamp,
+    fundingMode: input.fundingMode,
+    explorerUrl: input.explorerUrl,
+    isSimulated: input.isSimulated,
   }
 
   transactionStore.set(input.magicLinkTokenHash, record)
+  persistTransactionStore()
   return record
 }
 
@@ -84,6 +125,7 @@ export function markTransactionClaimed(
   }
 
   transactionStore.set(magicLinkTokenHash, updatedRecord)
+  persistTransactionStore()
   return updatedRecord
 }
 

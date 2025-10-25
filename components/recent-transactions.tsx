@@ -103,16 +103,38 @@ export function RecentTransactions() {
                 </p>
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-right space-y-1">
               <p className="font-semibold">
                 {tx.amount} {tx.currency}
               </p>
-              <Badge
-                variant={tx.status === "claimed" ? "default" : tx.status === "failed" ? "destructive" : "secondary"}
-                className="mt-1"
-              >
-                {tx.status}
-              </Badge>
+              <div className="flex items-center justify-end gap-2">
+                <Badge
+                  variant={tx.status === "claimed" ? "default" : tx.status === "failed" ? "destructive" : "secondary"}
+                >
+                  {tx.status}
+                </Badge>
+                <Badge variant={tx.isSimulated ? "outline" : "default"}>
+                  {tx.isSimulated ? "Simulated" : "Testnet"}
+                </Badge>
+              </div>
+              {tx.transactionHash && (
+                <div className="text-xs text-muted-foreground">
+                  {tx.isSimulated ? (
+                    <span title={tx.transactionHash}>Simulated hash {tx.transactionHash.slice(0, 10)}…</span>
+                  ) : tx.explorerUrl ? (
+                    <a
+                      href={tx.explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      View on Stellar Expert
+                    </a>
+                  ) : (
+                    <span title={tx.transactionHash}>Hash {tx.transactionHash.slice(0, 10)}…</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}
