@@ -3,8 +3,8 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'Ghost Wallets Dashboard',
+  description: 'Manage cross-border payouts and recent activity in Ghost Wallets.',
   generator: 'v0.app',
 }
 
@@ -15,6 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="stylesheet" href="https://use.typekit.net/jhz2dlr.css" />
+      </head>
       <body className="font-sans antialiased">
         {children}
         <Analytics />
