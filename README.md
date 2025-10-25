@@ -76,9 +76,38 @@ npm run dev
 
 7. Open [http://localhost:3000](http://localhost:3000)
 
-### Payment simulation mode
+### Judge-friendly payment modes
 
-The development environment simulates Stellar transfers so you can exercise the full email and magic-link flow without moving real funds. When a payment is initiated the server generates a mock transaction hash after a brief delay and records it like a successful transfer. Providing a `STELLAR_TREASURY_SECRET_KEY` is optional and no transaction will be submitted on-chain, even if the key is present.
+Ghost Wallets now ships with two safe execution paths so you can demo end-to-end flows without risking real funds:
+
+- **Simulation (default)** – Payments are mocked locally, transaction hashes are deterministically generated, and the dashboard clearly labels activity as “Simulated.” Use this for fast iteration or when you cannot fund a treasury account. A JSON snapshot is persisted to `data/magic-links.json` so links survive server restarts during judging.
+- **Stellar testnet** – Set `STELLAR_PAYMENT_MODE=testnet` and provide `STELLAR_TREASURY_SECRET_KEY`. Transfers are submitted to Soroban RPC, explorer links are surfaced in the UI/email, and recipients can verify hashes on Stellar Expert—still using play money from Friendbot.
+
+When testnet submission fails (e.g., RPC outage or unsupported asset), the API gracefully falls back to simulation and records the attempt so judges can continue the journey.
+
+### Reliability & recovery story
+
+- Magic links and transaction metadata are persisted to JSON snapshots in `data/` so a server restart during demo day does not invalidate issued links.
+- Tokens and claim state are hashed before persistence. The on-disk format makes it trivial to swap in Postgres/Supabase after the hackathon—see `lib/storage/filesystem.ts` for the adapter layer.
+- Rate limits protect the `/api/send`, `/api/verify-magic-link`, and `/api/claim-wallet` endpoints from brute force attempts while still permitting smooth judge walkthroughs.
+
+**Launch checklist** (post-hackathon): move the persistence adapter to Postgres, wire the `claim-wallet` route to the Soroban contract’s `transfer_ownership`, add background jobs to prune expired links, and ship automated compliance reporting.
+
+### Security & compliance guardrails
+
+- Email addresses are validated server-side, amounts are clamped via `NEXT_PUBLIC_MAX_SEND_AMOUNT`, and only a curated currency list (USDC, PYUSD, XLM) is accepted.
+- Claim flows rate-limit by IP, require a plausible Stellar address, and surface transaction hashes or explorer links in the dashboard for auditability.
+- Email receipts disclose whether a payment was simulated or executed on testnet and remind recipients about anti-phishing controls.
+
+### Recipient experience showcase
+
+Refer to `public/samples/magic-link-email.txt` for the plain-text email template a judge will receive. During demos, highlight the dashboard badges (“Simulated” vs “Testnet”) and the embedded explorer links so non-crypto natives can trust the flow without digging into tooling.
+
+### Personas & roadmap
+
+- **Primary persona:** cross-border payroll teams who need to pay contractors via email with minimal wallet setup friction.
+- **Secondary persona:** compliance teams evaluating Stellar pilots and requiring a clear recovery story.
+- **Next steps:** ship mobile-friendly claim pages, add configurable sending limits per organization, and expand asset support with contract-enforced allowlists.
 
 ## Project Structure
 
@@ -148,6 +177,9 @@ This project is optimized for deployment on Vercel:
 - `STELLAR_RPC_URL` - Stellar RPC endpoint
 - `GHOST_WALLET_CONTRACT_ID` - Deployed contract ID
 - `NEXT_PUBLIC_APP_URL` - Application URL
+- `STELLAR_PAYMENT_MODE` - Either `simulation` (default) or `testnet`
+- `STELLAR_TREASURY_SECRET_KEY` - Required when `STELLAR_PAYMENT_MODE=testnet`
+- `NEXT_PUBLIC_MAX_SEND_AMOUNT` - Upper bound enforced by the `/api/send` route (defaults to 10,000)
 
 ## License
 

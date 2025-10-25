@@ -16,6 +16,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# local persistence snapshots
+data/*.json
+
 # env files
 .env*
 

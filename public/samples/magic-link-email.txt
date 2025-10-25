@@ -1,0 +1,11 @@
+Subject: You've received 50.00 USDC via Ghost Wallets
+
+Hi there,
+
+Ghost Wallets just delivered 50.00 USDC to you via email. Click the secure link below to claim it:
+https://ghost-wallets.example/claim/abc123
+
+This link will expire in 7 days.
+Simulation notice: This transfer ran in Ghost Wallets' demo mode, so no real funds moved yet. When the team flips `STELLAR_PAYMENT_MODE=testnet`, you'll see a Stellar Expert link here instead.
+
+For your safety, Ghost Wallets enforces anti-phishing copy, rate limits, and sending caps during the hackathon. Ignore this email if you weren't expecting it.

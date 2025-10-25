@@ -1,10 +1,13 @@
 // Notification service for sending emails
 
 import { sendMagicLinkEmail } from "./email"
+import type { PaymentMode } from "./types/payments"
 
 interface NotificationOptions {
   senderName?: string
   expiresAt?: string
+  fundingMode: PaymentMode
+  explorerUrl?: string
 }
 
 /**
@@ -24,5 +27,7 @@ export async function sendNotification(
   await sendMagicLinkEmail(recipient, magicLink, amount, currency, {
     senderName: options.senderName,
     expiresAt: options.expiresAt,
+    fundingMode: options.fundingMode ?? "simulation",
+    explorerUrl: options.explorerUrl,
   })
 }

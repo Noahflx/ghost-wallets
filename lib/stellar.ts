@@ -7,6 +7,9 @@ import {
   isMagicLinkExpired,
 } from "./magic-link"
 import { markTransactionClaimed } from "./transactions"
+import { readJsonFile, writeJsonFile } from "./storage/filesystem"
+import type { PaymentMode } from "./types/payments"
+import type { PaymentMetadata } from "./types/payments"
 
 interface MagicLinkRecord {
   hashedToken: string
@@ -21,23 +24,64 @@ interface MagicLinkRecord {
   senderName?: string
   magicLinkToken: string
   redeemedAt?: Date
+  fundingMode: PaymentMode
+  explorerUrl?: string
 }
 
 const MAGIC_LINK_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+const MAGIC_LINKS_FILENAME = "magic-links.json"
+
+interface PersistedMagicLinkRecord
+  extends Omit<MagicLinkRecord, "expiresAt" | "redeemedAt"> {
+  expiresAt: string
+  redeemedAt?: string
+}
+
+function hydrateMagicLinkStore(): Map<string, MagicLinkRecord> {
+  const persisted = readJsonFile<Record<string, PersistedMagicLinkRecord>>(MAGIC_LINKS_FILENAME, {})
+  const store = new Map<string, MagicLinkRecord>()
+
+  for (const [key, record] of Object.entries(persisted)) {
+    store.set(key, {
+      ...record,
+      expiresAt: new Date(record.expiresAt),
+      redeemedAt: record.redeemedAt ? new Date(record.redeemedAt) : undefined,
+      fundingMode: record.fundingMode ?? "simulation",
+    })
+  }
+
+  return store
+}
 
 const globalStores = globalThis as typeof globalThis & {
   __magicLinkStore?: Map<string, MagicLinkRecord>
 }
 
 const magicLinkStore =
-  globalStores.__magicLinkStore ?? new Map<string, MagicLinkRecord>()
+  globalStores.__magicLinkStore ?? hydrateMagicLinkStore()
 
 if (!globalStores.__magicLinkStore) {
   globalStores.__magicLinkStore = magicLinkStore
 }
 
+function persistMagicLinkStore() {
+  const serializable: Record<string, PersistedMagicLinkRecord> = {}
+
+  for (const [key, record] of magicLinkStore.entries()) {
+    serializable[key] = {
+      ...record,
+      expiresAt: record.expiresAt.toISOString(),
+      redeemedAt: record.redeemedAt ? record.redeemedAt.toISOString() : undefined,
+    }
+  }
+
+  writeJsonFile(MAGIC_LINKS_FILENAME, serializable)
+}
+
 const RPC_URL = process.env.STELLAR_RPC_URL || "https://soroban-testnet.stellar.org"
 const NETWORK_PASSPHRASE = Networks.TESTNET
+const PAYMENT_MODE =
+  (process.env.STELLAR_PAYMENT_MODE?.toLowerCase() as PaymentMode | undefined) || "simulation"
 
 let cachedServer: SorobanRpc.Server | null | undefined
 
@@ -178,21 +222,23 @@ export async function createWallet(recipient: string): Promise<CreatedWallet> {
  * Simulate funding a ghost wallet by returning a fake transaction hash after a short delay.
  * This keeps the product flow and notifications intact without submitting a real Stellar payment.
  */
-export async function sendPayment(
+export interface PaymentResult extends PaymentMetadata {
+  txHash: string
+}
+
+function buildExplorerUrl(txHash: string, mode: PaymentMode): string | undefined {
+  if (mode === "testnet") {
+    return `https://stellar.expert/explorer/testnet/tx/${txHash}`
+  }
+
+  return undefined
+}
+
+function simulatePayment(
   walletAddress: string,
   amount: string,
   currency: string,
-): Promise<string> {
-  if (process.env.STELLAR_TREASURY_SECRET_KEY) {
-    console.warn(
-      "STELLAR_TREASURY_SECRET_KEY is configured, but payments are currently simulated and no on-chain transfer will be attempted.",
-    )
-  }
-
-  // Simulate a short processing delay so the flow appears realistic
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  // Generate a deterministic-looking hash so downstream flows behave as if a transaction succeeded
+): PaymentResult {
   const simulatedHash = createHash("sha256")
     .update(walletAddress)
     .update(":")
@@ -204,7 +250,49 @@ export async function sendPayment(
     .update(randomBytes(16))
     .digest("hex")
 
-  return simulatedHash
+  return {
+    txHash: simulatedHash,
+    mode: "simulation",
+    isSimulated: true,
+    explorerUrl: undefined,
+  }
+}
+
+export async function sendPayment(
+  walletAddress: string,
+  amount: string,
+  currency: string,
+): Promise<PaymentResult> {
+  if (PAYMENT_MODE === "testnet") {
+    const treasurySecret = process.env.STELLAR_TREASURY_SECRET_KEY
+
+    if (!treasurySecret) {
+      console.warn(
+        "STELLAR_PAYMENT_MODE is set to testnet but STELLAR_TREASURY_SECRET_KEY is not configured. Falling back to simulation.",
+      )
+    } else if (currency !== "XLM") {
+      console.warn(
+        `Testnet mode currently supports XLM payments only. Received ${currency}. Falling back to simulation.`,
+      )
+    } else {
+      try {
+        const txHash = await sendToGhostWallet(treasurySecret, walletAddress, amount, currency)
+        return {
+          txHash,
+          mode: "testnet",
+          isSimulated: false,
+          explorerUrl: buildExplorerUrl(txHash, "testnet"),
+        }
+      } catch (error) {
+        console.error("Failed to submit payment on the Stellar testnet. Falling back to simulation.", error)
+      }
+    }
+  }
+
+  // Simulate a short processing delay so the flow appears realistic
+  await new Promise((resolve) => setTimeout(resolve, 500))
+
+  return simulatePayment(walletAddress, amount, currency)
 }
 
 /**
@@ -213,6 +301,8 @@ export async function sendPayment(
 interface MagicLinkOptions {
   contractAddress?: string
   senderName?: string
+  fundingMode?: PaymentMode
+  explorerUrl?: string
 }
 
 export interface GeneratedMagicLink {
@@ -234,6 +324,8 @@ export async function generateMagicLink(
   const hashedToken = hashToken(token)
   const expiresAt = new Date(Date.now() + MAGIC_LINK_EXPIRATION_MS)
 
+  const fundingMode = options.fundingMode ?? PAYMENT_MODE
+
   magicLinkStore.set(hashedToken, {
     hashedToken,
     walletAddress,
@@ -246,7 +338,11 @@ export async function generateMagicLink(
     contractAddress: options.contractAddress,
     senderName: options.senderName,
     magicLinkToken: token,
+    fundingMode,
+    explorerUrl: options.explorerUrl,
   })
+
+  persistMagicLinkStore()
 
   return {
     url: createMagicLinkUrl(token),
@@ -265,6 +361,8 @@ export interface MagicLinkVerificationResult {
   fundingTxHash?: string
   contractAddress?: string
   senderName?: string
+  fundingMode: PaymentMode
+  explorerUrl?: string
 }
 
 /**
@@ -286,6 +384,7 @@ export async function verifyMagicLink(
 
   if (isMagicLinkExpired(record.expiresAt)) {
     magicLinkStore.delete(hashedToken)
+    persistMagicLinkStore()
     return null
   }
 
@@ -298,6 +397,8 @@ export async function verifyMagicLink(
     fundingTxHash: record.fundingTxHash,
     contractAddress: record.contractAddress,
     senderName: record.senderName,
+    fundingMode: record.fundingMode,
+    explorerUrl: record.explorerUrl,
   }
 }
 
@@ -311,6 +412,8 @@ export interface ClaimFundsResult {
   currency: string
   recipient: string
   contractAddress?: string
+  fundingMode: PaymentMode
+  explorerUrl?: string
 }
 
 export async function claimFunds(token: string): Promise<ClaimFundsResult> {
@@ -333,6 +436,7 @@ export async function claimFunds(token: string): Promise<ClaimFundsResult> {
   record.redeemed = true
   record.redeemedAt = new Date()
   magicLinkStore.set(hashedToken, record)
+  persistMagicLinkStore()
 
   if (!record.fundingTxHash) {
     throw new Error("Funding transaction hash is not available for this claim")
@@ -347,5 +451,7 @@ export async function claimFunds(token: string): Promise<ClaimFundsResult> {
     currency: record.currency,
     recipient: record.recipient,
     contractAddress: record.contractAddress,
+    fundingMode: record.fundingMode,
+    explorerUrl: record.explorerUrl,
   }
 }
