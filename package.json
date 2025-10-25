@@ -1,0 +1,39 @@
+{
+  "name": "ghost-wallets",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "lint": "next lint",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-select": "latest",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "latest",
+    "@stellar/stellar-sdk": "latest",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "crypto": "latest",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.454.0",
+    "next": "16.0.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "swr": "^2.2.5",
+    "tailwind-merge": "^2.5.5",
+    "tailwindcss-animate": "^1.0.7",
+    "tw-animate-css": "latest"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "postcss": "^8.5",
+    "tailwindcss": "4.1.16",
+    "typescript": "^5"
+  }
+}
