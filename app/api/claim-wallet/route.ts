@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "A valid Stellar address is required" }, { status: 400 })
     }
 
-    const claimResult = await claimFunds(token)
+    const claimResult = await claimFunds(token, userAddress)
 
     // TODO: Transfer ownership of the ghost wallet contract to userAddress
     // This would call the contract's transfer_ownership function
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       tokenSymbol: claimResult.currency,
       transactionHash: claimResult.txHash,
       recipientEmail: claimResult.recipient,
-      claimedBy: userAddress,
+      claimedBy: claimResult.claimedBy ?? userAddress,
       paymentMode: claimResult.fundingMode,
       explorerUrl: claimResult.explorerUrl ?? null,
     })
