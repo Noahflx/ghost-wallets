@@ -44,10 +44,10 @@ npm install
 cp .env.example .env.local
 \`\`\`
 
-4. Configure required environment variables in `.env.local`:
+4. Configure environment variables in `.env.local` (all optional for simulated payments):
 
 ```env
-# Stellar treasury account secret key used to fund ghost wallets
+# (Optional) Stellar treasury account secret key. Payments are simulated and this key is ignored.
 STELLAR_TREASURY_SECRET_KEY="${YOUR_TREASURY_SECRET}"
 
 # Gmail credentials used for sending magic link emails
@@ -75,6 +75,10 @@ npm run dev
 \`\`\`
 
 7. Open [http://localhost:3000](http://localhost:3000)
+
+### Payment simulation mode
+
+The development environment simulates Stellar transfers so you can exercise the full email and magic-link flow without moving real funds. When a payment is initiated the server generates a mock transaction hash after a brief delay and records it like a successful transfer. Providing a `STELLAR_TREASURY_SECRET_KEY` is optional and no transaction will be submitted on-chain, even if the key is present.
 
 ## Project Structure
 

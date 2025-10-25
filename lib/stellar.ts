@@ -1,4 +1,5 @@
 import { Keypair, SorobanRpc, TransactionBuilder, Networks, Operation, Asset, BASE_FEE } from "@stellar/stellar-sdk"
+import { createHash, randomBytes } from "crypto"
 import {
   createMagicLinkUrl,
   generateMagicLinkToken,
@@ -174,26 +175,36 @@ export async function createWallet(recipient: string): Promise<CreatedWallet> {
 }
 
 /**
- * Send funds from the treasury wallet to a ghost wallet.
- * Falls back to a mocked hash when the treasury secret is not configured.
+ * Simulate funding a ghost wallet by returning a fake transaction hash after a short delay.
+ * This keeps the product flow and notifications intact without submitting a real Stellar payment.
  */
 export async function sendPayment(
   walletAddress: string,
   amount: string,
   currency: string,
 ): Promise<string> {
-  const treasurySecret = process.env.STELLAR_TREASURY_SECRET_KEY
-
-  if (!treasurySecret) {
-    throw new Error("STELLAR_TREASURY_SECRET_KEY environment variable is required to send payments")
+  if (process.env.STELLAR_TREASURY_SECRET_KEY) {
+    console.warn(
+      "STELLAR_TREASURY_SECRET_KEY is configured, but payments are currently simulated and no on-chain transfer will be attempted.",
+    )
   }
 
-  try {
-    return await sendToGhostWallet(treasurySecret, walletAddress, amount, currency)
-  } catch (error) {
-    console.error("Error sending payment:", error)
-    throw error
-  }
+  // Simulate a short processing delay so the flow appears realistic
+  await new Promise((resolve) => setTimeout(resolve, 500))
+
+  // Generate a deterministic-looking hash so downstream flows behave as if a transaction succeeded
+  const simulatedHash = createHash("sha256")
+    .update(walletAddress)
+    .update(":")
+    .update(amount)
+    .update(":")
+    .update(currency)
+    .update(":")
+    .update(Date.now().toString())
+    .update(randomBytes(16))
+    .digest("hex")
+
+  return simulatedHash
 }
 
 /**
