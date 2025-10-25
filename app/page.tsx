@@ -15,45 +15,45 @@ import { Button } from "@/components/ui/button"
 
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white text-[#110A2F]">
+    <div className="relative min-h-screen overflow-hidden bg-[#05020D] text-white">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,_rgba(165,145,255,0.35)_0%,_rgba(255,255,255,0)_65%)]" />
-        <div className="absolute top-1/3 -left-40 h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle,_rgba(206,186,255,0.25)_0%,_rgba(255,255,255,0)_70%)]" />
-        <div className="absolute bottom-0 right-0 h-[440px] w-[440px] rounded-full bg-[radial-gradient(circle,_rgba(198,174,255,0.3)_0%,_rgba(255,255,255,0)_75%)]" />
+        <div className="absolute -top-32 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,_rgba(118,86,255,0.5)_0%,_rgba(5,2,13,0)_60%)]" />
+        <div className="absolute top-1/3 -left-40 h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle,_rgba(66,196,255,0.35)_0%,_rgba(5,2,13,0)_65%)]" />
+        <div className="absolute bottom-0 right-0 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,_rgba(255,118,188,0.3)_0%,_rgba(5,2,13,0)_70%)]" />
       </div>
 
-      <header className="sticky top-0 z-20 border-b border-[#E6E1FF]/60 bg-white/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#05020D]/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#B7A6FF] to-[#E3D9FF] text-lg font-semibold text-[#110A2F]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#736BFF] to-[#40E2FF] text-lg font-semibold text-[#05020D]">
               G
             </div>
             <div>
-              <span className="text-lg font-semibold text-[#110A2F]">Ghost</span>
-              <p className="text-xs text-[#5F567C]">The invisible co-pilot for crypto ops</p>
+              <span className="text-lg font-semibold">Ghost Wallets</span>
+              <p className="text-xs text-white/60">Custody-free global payouts</p>
             </div>
           </div>
-          <nav className="hidden items-center gap-8 text-sm font-medium text-[#5F567C] md:flex">
-            <Link href="#why" className="transition hover:text-[#110A2F]">
+          <nav className="hidden items-center gap-8 text-sm font-medium text-white/70 md:flex">
+            <Link href="#why" className="transition hover:text-white">
               Why Ghost
             </Link>
-            <Link href="#features" className="transition hover:text-[#110A2F]">
+            <Link href="#features" className="transition hover:text-white">
               Platform
             </Link>
-            <Link href="#how" className="transition hover:text-[#110A2F]">
-              Flow
+            <Link href="#how" className="transition hover:text-white">
+              How it works
             </Link>
-            <Link href="#security" className="transition hover:text-[#110A2F]">
-              Safeguards
+            <Link href="#security" className="transition hover:text-white">
+              Security
             </Link>
           </nav>
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="hidden text-sm font-medium text-[#5F567C] transition hover:text-[#110A2F] md:block">
+            <Link href="/dashboard" className="hidden text-sm font-medium text-white/70 transition hover:text-white md:block">
               Sign in
             </Link>
             <Link href="/dashboard">
-              <Button className="rounded-full bg-gradient-to-r from-[#C5B6FF] via-[#B49BFF] to-[#E6DCFF] px-6 text-sm font-semibold text-[#110A2F] shadow-[0_0_40px_-10px_rgba(179,158,255,0.6)] transition hover:opacity-90">
-                Launch Ghost
+              <Button className="rounded-full bg-gradient-to-r from-[#6C63FF] via-[#8A5CFF] to-[#3DEBFF] px-6 text-sm font-semibold text-[#05020D] shadow-[0_0_40px_-10px_rgba(108,99,255,0.6)] transition hover:opacity-90">
+                Launch app
               </Button>
             </Link>
           </div>
@@ -63,89 +63,90 @@ export default function HomePage() {
       <main className="relative z-10">
         <section className="mx-auto flex max-w-6xl flex-col gap-12 px-6 pb-24 pt-20 md:flex-row md:items-center">
           <div className="flex-1 space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#E7E2FF] bg-white/80 px-4 py-1 text-xs font-medium text-[#5F567C] shadow-[0_12px_40px_-20px_rgba(98,75,189,0.45)] backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5 text-[#8F7EFF]" />
-              <span>Spin up wallets, flows & approvals in minutes</span>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs font-medium text-white/70 backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5 text-[#7D73FF]" />
+              <span>Send branded payouts in seconds</span>
             </div>
-            <h1 className="text-balance text-4xl font-bold leading-tight tracking-tight text-[#110A2F] md:text-6xl">
-              Ghost makes multi-chain payouts feel like sending a link.
+            <h1 className="text-balance text-4xl font-bold leading-tight tracking-tight md:text-6xl">
+              The sleekest way to send crypto to anyone on the internet.
             </h1>
-            <p className="max-w-xl text-lg text-[#5F567C] md:text-xl">
-              Automate treasury playbooks, program branded payout portals, and let Ghost choreograph the on-chain heavy lifting. Your teams stay focused on relationships—not rails.
+            <p className="max-w-xl text-lg text-white/70 md:text-xl">
+              Ghost Wallets merges the polish of modern fintech with self-custody. Issue global USDC payouts to email
+              addresses, with passkey security and instant settlement on Stellar.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href="/dashboard" className="w-full sm:w-auto">
-                <Button className="group flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#E9E0FF] via-[#C8B7FF] to-[#AD97FF] px-8 py-6 text-base font-semibold text-[#110A2F] shadow-[0_0_50px_-12px_rgba(167,141,255,0.85)] transition hover:translate-y-0.5 hover:opacity-95">
-                  Start orchestrating
+                <Button className="group flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#6C63FF] via-[#8A5CFF] to-[#3DEBFF] px-8 py-6 text-base font-semibold text-[#05020D] shadow-[0_0_50px_-12px_rgba(108,99,255,0.9)] transition hover:translate-y-0.5 hover:opacity-95">
+                  Create a payout
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
               <Button
                 variant="outline"
-                className="w-full rounded-full border-[#D8CEFF] bg-white/70 px-8 py-6 text-base text-[#5F567C] transition hover:border-[#C5B6FF] hover:bg-white sm:w-auto"
+                className="w-full rounded-full border-white/20 bg-white/5 px-8 py-6 text-base text-white/80 transition hover:border-white/40 hover:bg-white/10 sm:w-auto"
               >
-                Explore docs
+                Talk to sales
               </Button>
             </div>
-            <div className="grid gap-6 text-sm text-[#5F567C] md:grid-cols-3">
+            <div className="grid gap-6 text-sm text-white/60 md:grid-cols-3">
               <div>
-                <p className="text-2xl font-semibold text-[#110A2F]">30s</p>
-                <p>Average time from CSV upload to executed batch</p>
+                <p className="text-2xl font-semibold text-white">4.8s</p>
+                <p>Average settlement on Stellar</p>
               </div>
               <div>
-                <p className="text-2xl font-semibold text-[#110A2F]">50+</p>
-                <p>Preset flows spanning stablecoins, swaps & fiat ramps</p>
+                <p className="text-2xl font-semibold text-white">38+</p>
+                <p>Supported payout destinations</p>
               </div>
               <div>
-                <p className="text-2xl font-semibold text-[#110A2F]">∞</p>
-                <p>Composable automations powered by Ghost scripts</p>
+                <p className="text-2xl font-semibold text-white">99.99%</p>
+                <p>Uptime across our smart wallet network</p>
               </div>
             </div>
           </div>
           <div className="relative flex-1">
-            <div className="absolute inset-0 -translate-x-8 rounded-[36px] bg-gradient-to-br from-[#E3DAFF]/60 via-[#C9BBFF]/40 to-transparent blur-3xl" />
-            <div className="relative rounded-[32px] border border-[#E7E2FF] bg-white/80 p-8 shadow-[0_40px_120px_-45px_rgba(114,88,192,0.45)] backdrop-blur-xl">
-              <div className="flex items-center justify-between text-xs text-[#5F567C]">
-                <span>Ghost Playbook</span>
-                <span>Live • Autopilot</span>
+            <div className="absolute inset-0 -translate-x-8 rounded-[36px] bg-gradient-to-br from-[#7D73FF]/30 via-[#40E2FF]/20 to-transparent blur-3xl" />
+            <div className="relative rounded-[32px] border border-white/10 bg-white/[0.04] p-8 shadow-[0_40px_120px_-45px_rgba(15,10,40,0.9)] backdrop-blur-xl">
+              <div className="flex items-center justify-between text-xs text-white/60">
+                <span>Ghost Payout</span>
+                <span>Live • Soroban</span>
               </div>
-              <div className="mt-6 rounded-3xl border border-[#EFE9FF] bg-white p-6">
-                <div className="flex items-center justify-between text-sm text-[#5F567C]">
-                  <span>Recipient set</span>
-                  <span className="font-semibold text-[#110A2F]">Founders • Series A</span>
+              <div className="mt-6 rounded-3xl border border-white/5 bg-black/40 p-6">
+                <div className="flex items-center justify-between text-sm text-white/70">
+                  <span>Recipient</span>
+                  <span className="font-semibold text-white">sophia@orbit.studio</span>
                 </div>
-                <div className="mt-4 flex items-center justify-between text-sm text-[#5F567C]">
+                <div className="mt-4 flex items-center justify-between text-sm text-white/70">
                   <span>Network</span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#C5B6FF]/60 bg-[#F1ECFF] px-3 py-1 text-xs font-medium text-[#7B69D8]">
-                    <Globe className="h-3.5 w-3.5" />Multi-chain
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#40E2FF]/40 bg-[#40E2FF]/10 px-3 py-1 text-xs font-medium text-[#40E2FF]">
+                    <Globe className="h-3.5 w-3.5" />Stellar
                   </span>
                 </div>
-                <div className="mt-6 rounded-2xl border border-[#ECE4FF] bg-[#F8F5FF] p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-[#8D80B5]">Release</p>
-                  <p className="mt-3 text-3xl font-semibold text-[#110A2F]">$1.2M USDC</p>
+                <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/40">Amount</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">2,500.00 USDC</p>
                 </div>
-                <div className="mt-4 flex items-center justify-between text-xs text-[#8D80B5]">
-                  <span>Triggered via</span>
-                  <span>Ghost CLI • v0.9</span>
+                <div className="mt-4 flex items-center justify-between text-xs text-white/50">
+                  <span>Smart wallet created</span>
+                  <span>0x82F…991C</span>
                 </div>
               </div>
-              <div className="mt-6 grid gap-4 text-sm text-[#5F567C]">
+              <div className="mt-6 grid gap-4 text-sm text-white/70">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E9E0FF] text-[#7B69D8]">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7D73FF]/15 text-[#7D73FF]">
                     <CheckCircle2 className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-semibold text-[#110A2F]">Policy aware automation</p>
-                    <p className="text-xs text-[#8D80B5]">Ghost validates spend limits and signers before dispatch.</p>
+                    <p className="font-semibold text-white">Instant on-chain escrow</p>
+                    <p className="text-xs text-white/50">Soroban contract locks funds until claimed.</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4EFFF] text-[#7B69D8]">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#40E2FF]/15 text-[#40E2FF]">
                     <Lock className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-semibold text-[#110A2F]">Encrypted recoverability</p>
-                    <p className="text-xs text-[#8D80B5]">Secrets stay sealed in Ghost Vault with hardware recovery paths.</p>
+                    <p className="font-semibold text-white">Passkey-secured claiming</p>
+                    <p className="text-xs text-white/50">Email or passkey verification in under a minute.</p>
                   </div>
                 </div>
               </div>
@@ -153,56 +154,54 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="why" className="relative border-y border-[#EFE9FF] bg-white/60 py-16 backdrop-blur-xl">
-          <div className="mx-auto grid max-w-5xl gap-10 px-6 text-sm text-[#5F567C] md:grid-cols-3">
-            {["Treasury automation made human", "Purpose-built for globally distributed teams", "Launch once, reuse everywhere"].map((headline) => (
-              <div key={headline} className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.35em] text-[#B39DFF]">Why teams choose Ghost</span>
-                <p className="text-lg font-semibold text-[#110A2F]">{headline}</p>
-                <p>
-                  Ghost eliminates spreadsheet gymnastics with programmable playbooks, live monitoring, and built-in controls that travel with every wallet.
-                </p>
-              </div>
-            ))}
+        <section id="why" className="relative border-y border-white/5 bg-white/[0.03] py-16 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-10 px-6 text-sm text-white/40">
+            <span>Trusted by treasury teams at</span>
+            <div className="flex flex-wrap items-center gap-6 text-white/60">
+              <span className="font-semibold tracking-wide">Orbit Labs</span>
+              <span className="font-semibold tracking-wide">Nova Guild</span>
+              <span className="font-semibold tracking-wide">Stellar Foundation</span>
+              <span className="font-semibold tracking-wide">Relay Collective</span>
+            </div>
           </div>
         </section>
 
         <section id="features" className="mx-auto max-w-6xl px-6 py-24">
           <div className="mx-auto max-w-3xl text-center">
-            <span className="text-sm font-semibold uppercase tracking-[0.35em] text-[#B39DFF]">Platform</span>
-            <h2 className="mt-4 text-balance text-3xl font-semibold text-[#110A2F] md:text-4xl">
-              Everything your finance squad needs to choreograph crypto.
+            <span className="text-sm font-semibold uppercase tracking-[0.35em] text-white/40">Platform</span>
+            <h2 className="mt-4 text-balance text-3xl font-semibold md:text-4xl">
+              A self-serve payout desk with enterprise-grade polish.
             </h2>
-            <p className="mt-4 text-lg text-[#5F567C]">
-              Compose flows, trigger them from Ghost CLI or the dashboard, and sync the results into your ops stack without leaving the canvas.
+            <p className="mt-4 text-lg text-white/60">
+              Automate USDC distribution, monitor wallet health, and give recipients a delightful claiming experience.
             </p>
           </div>
           <div className="mt-16 grid gap-8 md:grid-cols-3">
-            <div className="group rounded-3xl border border-[#EEE7FF] bg-white/80 p-8 transition hover:border-[#D8CEFF] hover:bg-white">
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ECE3FF] text-[#7B69D8]">
+            <div className="group rounded-3xl border border-white/5 bg-white/[0.05] p-8 transition hover:border-white/15 hover:bg-white/[0.08]">
+              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7D73FF]/15 text-[#7D73FF]">
                 <Send className="h-5 w-5" />
               </div>
-              <h3 className="text-xl font-semibold text-[#110A2F]">Flow builder</h3>
-              <p className="mt-3 text-sm text-[#5F567C]">
-                Drag triggers, approvals, and actions into reusable automations your teammates can launch in a click.
+              <h3 className="text-xl font-semibold text-white">Batch or one-off payouts</h3>
+              <p className="mt-3 text-sm text-white/60">
+                Upload CSVs or trigger payouts via API. We deploy recipient wallets instantly and handle the on-chain flow.
               </p>
             </div>
-            <div className="group rounded-3xl border border-[#EEE7FF] bg-white/80 p-8 transition hover:border-[#D8CEFF] hover:bg-white">
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EDE5FF] text-[#7B69D8]">
+            <div className="group rounded-3xl border border-white/5 bg-white/[0.05] p-8 transition hover:border-white/15 hover:bg-white/[0.08]">
+              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#40E2FF]/15 text-[#40E2FF]">
                 <Wallet className="h-5 w-5" />
               </div>
-              <h3 className="text-xl font-semibold text-[#110A2F]">Smart wallets</h3>
-              <p className="mt-3 text-sm text-[#5F567C]">
-                Ghost spins up branded recipient experiences with passkeys, swaps, and instant attestations baked in.
+              <h3 className="text-xl font-semibold text-white">Magic link claiming</h3>
+              <p className="mt-3 text-sm text-white/60">
+                Recipients receive a beautifully branded portal with passkey support and instant swaps to local partners.
               </p>
             </div>
-            <div className="group rounded-3xl border border-[#EEE7FF] bg-white/80 p-8 transition hover:border-[#D8CEFF] hover:bg-white">
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F3ECFF] text-[#7B69D8]">
+            <div className="group rounded-3xl border border-white/5 bg-white/[0.05] p-8 transition hover:border-white/15 hover:bg-white/[0.08]">
+              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FF7BCA]/20 text-[#FF7BCA]">
                 <BarChart3 className="h-5 w-5" />
               </div>
-              <h3 className="text-xl font-semibold text-[#110A2F]">Reporting sync</h3>
-              <p className="mt-3 text-sm text-[#5F567C]">
-                Stream activity into Notion, Airtable, or your data warehouse with full audit trails.
+              <h3 className="text-xl font-semibold text-white">Treasury level insights</h3>
+              <p className="mt-3 text-sm text-white/60">
+                Monitor flows in real time, reconcile payouts, and export audit trails designed for finance teams.
               </p>
             </div>
           </div>
@@ -211,43 +210,46 @@ export default function HomePage() {
         <section id="how" className="mx-auto max-w-6xl px-6 pb-24">
           <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr]">
             <div className="space-y-5">
-              <span className="text-sm font-semibold uppercase tracking-[0.35em] text-[#B39DFF]">Flow</span>
-              <h2 className="text-3xl font-semibold text-[#110A2F] md:text-4xl">
-                Coordinate every release with a single command.
+              <span className="text-sm font-semibold uppercase tracking-[0.35em] text-white/40">Workflow</span>
+              <h2 className="text-3xl font-semibold md:text-4xl">
+                Ship payouts without asking your engineers for help.
               </h2>
-              <p className="text-lg text-[#5F567C]">
-                Whether you kick off from the dashboard, Ghost CLI, or an API call, every payout inherits the same guardrails, approvals, and real-time visibility.
+              <p className="text-lg text-white/60">
+                We abstract away wallet creation, recovery, and compliance. Your team focuses on why the funds move—not how.
               </p>
             </div>
             <div className="space-y-6">
               {[
                 {
                   step: "01",
-                  title: "Draft a playbook",
-                  copy: "Select recipients, amounts, and compliance requirements. Ghost suggests templates based on past runs.",
+                  title: "Load recipients",
+                  copy:
+                    "Type in an email, upload a CSV, or call our API. We verify destinations and prepare smart wallets on the fly.",
                 },
                 {
                   step: "02",
-                  title: "Simulate & approve",
-                  copy: "Preview gas, on/off-ramp routes, and signer assignments. One-click approvals stream to stakeholders.",
+                  title: "Approve and dispatch",
+                  copy:
+                    "Treasury policies, spending limits, and multi-sig reviews are enforced before anything hits the chain.",
                 },
                 {
                   step: "03",
-                  title: "Autopilot execution",
-                  copy: "Ghost dispatches on-chain actions, triggers alerts, and posts results to your comms stack instantly.",
+                  title: "Recipients claim instantly",
+                  copy:
+                    "Magic links open a Phantom-quality experience with passkey login, fiat ramps, and customer support built-in.",
                 },
               ].map(({ step, title, copy }) => (
                 <div
                   key={step}
-                  className="relative overflow-hidden rounded-3xl border border-[#EEE7FF] bg-white/80 p-6 backdrop-blur transition hover:border-[#D8CEFF] hover:bg-white"
+                  className="relative overflow-hidden rounded-3xl border border-white/5 bg-white/[0.04] p-6 backdrop-blur transition hover:border-white/15 hover:bg-white/[0.08]"
                 >
                   <div className="flex items-start gap-4">
-                    <span className="mt-1 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#F1ECFF] text-sm font-semibold text-[#7B69D8]">
+                    <span className="mt-1 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-sm font-semibold text-white/70">
                       {step}
                     </span>
                     <div>
-                      <h3 className="text-lg font-semibold text-[#110A2F]">{title}</h3>
-                      <p className="mt-2 text-sm text-[#5F567C]">{copy}</p>
+                      <h3 className="text-lg font-semibold text-white">{title}</h3>
+                      <p className="mt-2 text-sm text-white/60">{copy}</p>
                     </div>
                   </div>
                 </div>
@@ -256,43 +258,44 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="security" className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] border border-[#E8E1FF] bg-gradient-to-br from-[#F7F3FF] via-[#F0E8FF] to-[#FFFFFF] px-6 py-20">
-          <div className="absolute right-12 top-12 hidden h-32 w-32 rounded-full bg-[radial-gradient(circle,_rgba(173,151,255,0.3)_0%,_rgba(247,243,255,0)_70%)] md:block" />
+        <section id="security" className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] border border-white/5 bg-gradient-to-br from-[#17152A] via-[#120F24] to-[#05020D] px-6 py-20">
+          <div className="absolute right-12 top-12 hidden h-32 w-32 rounded-full bg-[radial-gradient(circle,_rgba(61,235,255,0.4)_0%,_rgba(18,15,36,0)_70%)] md:block" />
           <div className="mx-auto flex max-w-4xl flex-col gap-10 md:flex-row md:items-center">
             <div className="flex-1 space-y-4">
-              <span className="text-sm font-semibold uppercase tracking-[0.35em] text-[#9E89FF]">Safeguards</span>
-              <h2 className="text-3xl font-semibold text-[#110A2F] md:text-4xl">Enterprise controls without the friction.</h2>
-              <p className="text-lg text-[#5F567C]">
-                Ghost Vault stores secrets with threshold encryption, observability surfaces anomalies in real time, and automated recovery paths keep funds accessible across teams.
+              <span className="text-sm font-semibold uppercase tracking-[0.35em] text-[#3DEBFF]">Security</span>
+              <h2 className="text-3xl font-semibold md:text-4xl">Enterprise controls built into every wallet.</h2>
+              <p className="text-lg text-white/60">
+                Your treasury policies live on-chain. From configurable recovery guardians to real-time anomaly detection,
+                Ghost keeps funds safe without slowing your finance team.
               </p>
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-[#EEE7FF] bg-white/80 p-4 text-sm text-[#5F567C]">
-                  <div className="mb-2 flex items-center gap-2 text-[#110A2F]">
-                    <Shield className="h-4 w-4 text-[#7B69D8]" />
+                <div className="rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-white/70">
+                  <div className="mb-2 flex items-center gap-2 text-white">
+                    <Shield className="h-4 w-4 text-[#7D73FF]" />
                     Hardware-backed approvals
                   </div>
-                  Require Ledger, YubiKey, or passkey sign-offs at any stage of a playbook.
+                  Enforce policy-based approvals with Ledger and YubiKey support.
                 </div>
-                <div className="rounded-2xl border border-[#EEE7FF] bg-white/80 p-4 text-sm text-[#5F567C]">
-                  <div className="mb-2 flex items-center gap-2 text-[#110A2F]">
-                    <Zap className="h-4 w-4 text-[#7B69D8]" />
+                <div className="rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-white/70">
+                  <div className="mb-2 flex items-center gap-2 text-white">
+                    <Zap className="h-4 w-4 text-[#40E2FF]" />
                     Live compliance monitoring
                   </div>
-                  Sanctions screening, travel-rule exports, and automated journaling keep auditors satisfied.
+                  Sanctions screening, travel rule exports, and anomaly alerts included.
                 </div>
               </div>
             </div>
             <div className="flex-1 space-y-6">
-              <div className="rounded-3xl border border-[#EEE7FF] bg-white/80 p-6 text-sm text-[#5F567C] backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#9E89FF]">Resilience</p>
-                <p className="mt-3 text-lg text-[#110A2F]">
-                  Multi-region relayers and auto-failover scripts mean Ghost keeps working even when networks are congested.
+              <div className="rounded-3xl border border-white/5 bg-white/[0.04] p-6 text-sm text-white/70 backdrop-blur">
+                <p className="text-xs uppercase tracking-[0.25em] text-white/40">Resilience</p>
+                <p className="mt-3 text-lg text-white">
+                  Multi-region relayers and automatic wallet recovery ensure 24/7 access even under network pressure.
                 </p>
               </div>
-              <div className="rounded-3xl border border-[#EEE7FF] bg-white/80 p-6 text-sm text-[#5F567C] backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#9E89FF]">Auditability</p>
-                <p className="mt-3 text-lg text-[#110A2F]">
-                  Every playbook run captures immutable context you can export to Notion, Slack, or your ledger.
+              <div className="rounded-3xl border border-white/5 bg-white/[0.04] p-6 text-sm text-white/70 backdrop-blur">
+                <p className="text-xs uppercase tracking-[0.25em] text-white/40">Auditability</p>
+                <p className="mt-3 text-lg text-white">
+                  Every action writes to an immutable ledger. Export SOC 2-ready reports with a single click.
                 </p>
               </div>
             </div>
@@ -300,24 +303,24 @@ export default function HomePage() {
         </section>
 
         <section className="mx-auto max-w-5xl px-6 py-24 text-center">
-          <div className="mx-auto max-w-3xl space-y-6 rounded-[40px] border border-[#E5DEFF] bg-gradient-to-r from-[#E9E0FF] via-[#D4C4FF] to-[#F0E8FF] p-[1px]">
-            <div className="rounded-[38px] bg-white px-8 py-14">
-              <span className="text-sm font-semibold uppercase tracking-[0.35em] text-[#B39DFF]">Get started</span>
-              <h2 className="mt-4 text-3xl font-semibold text-[#110A2F] md:text-4xl">Bring Ghost to your treasury command center.</h2>
-              <p className="mt-4 text-lg text-[#5F567C]">
-                Launch a sandbox workspace, test automations with Ghost CLI, and invite stakeholders when you are ready to scale.
+          <div className="mx-auto max-w-3xl space-y-6 rounded-[40px] border border-white/10 bg-gradient-to-r from-[#6C63FF] via-[#8A5CFF] to-[#3DEBFF] p-[1px]">
+            <div className="rounded-[38px] bg-[#05020D] px-8 py-14">
+              <span className="text-sm font-semibold uppercase tracking-[0.35em] text-white/50">Get Started</span>
+              <h2 className="mt-4 text-3xl font-semibold md:text-4xl">Bring treasury-grade payouts to your product.</h2>
+              <p className="mt-4 text-lg text-white/70">
+                Spin up a sandbox in minutes or connect with our team for a tailored deployment plan.
               </p>
               <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                 <Link href="/dashboard" className="w-full sm:w-auto">
-                  <Button className="w-full rounded-full bg-[#110A2F] px-8 py-6 text-base font-semibold text-white shadow-[0_30px_80px_-30px_rgba(17,10,47,0.55)] transition hover:opacity-90">
-                    Launch Ghost
+                  <Button className="w-full rounded-full bg-white px-8 py-6 text-base font-semibold text-[#05020D] shadow-[0_30px_80px_-30px_rgba(255,255,255,0.9)] transition hover:opacity-90">
+                    Launch the app
                   </Button>
                 </Link>
                 <Button
                   variant="outline"
-                  className="w-full rounded-full border-[#D8CEFF] bg-white/70 px-8 py-6 text-base text-[#5F567C] transition hover:border-[#C5B6FF] hover:bg-white sm:w-auto"
+                  className="w-full rounded-full border-white/30 bg-white/5 px-8 py-6 text-base text-white/80 transition hover:border-white/60 hover:bg-white/10 sm:w-auto"
                 >
-                  Chat with the team
+                  Book a demo
                 </Button>
               </div>
             </div>
@@ -325,26 +328,26 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-[#E6E1FF] bg-white/80 py-10 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 text-sm text-[#5F567C] md:flex-row md:items-center md:justify-between">
+      <footer className="border-t border-white/10 bg-[#04000C]/80 py-10 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 text-sm text-white/60 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#B7A6FF] to-[#E3D9FF] text-sm font-semibold text-[#110A2F]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#736BFF] to-[#40E2FF] text-sm font-semibold text-[#05020D]">
               G
             </div>
             <div>
-              <p className="font-medium text-[#110A2F]">Ghost</p>
-              <p className="text-xs text-[#8D80B5]">© {new Date().getFullYear()} Ghost Labs</p>
+              <p className="font-medium text-white">Ghost Wallets</p>
+              <p className="text-xs text-white/50">© {new Date().getFullYear()} Ghost Labs, Inc.</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-4 text-xs md:text-sm">
-            <Link href="#security" className="transition hover:text-[#110A2F]">
-              Safeguards
+            <Link href="#security" className="transition hover:text-white">
+              Security
             </Link>
-            <Link href="/dashboard" className="transition hover:text-[#110A2F]">
+            <Link href="/dashboard" className="transition hover:text-white">
               App
             </Link>
-            <Link href="mailto:team@ghost.dev" className="transition hover:text-[#110A2F]">
-              team@ghost.dev
+            <Link href="mailto:hello@ghostwallets.xyz" className="transition hover:text-white">
+              hello@ghostwallets.xyz
             </Link>
           </div>
         </div>
