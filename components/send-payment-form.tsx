@@ -12,7 +12,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, CheckCircle2, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
-export function SendPaymentForm() {
+type SendPaymentFormProps = {
+  onSend?: (amount: number) => void
+}
+
+export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
   const [recipientEmail, setRecipientEmail] = useState("")
   const [amount, setAmount] = useState("")
   const [tokenSymbol, setTokenSymbol] = useState("USDC")
@@ -47,6 +51,7 @@ export function SendPaymentForm() {
 
       setSuccess(true)
       setMagicLinkUrl(data.magicLinkUrl)
+      onSend?.(Number(amount))
       toast({
         title: "Payment sent!",
         description: "The recipient will receive a magic link to claim their funds.",
