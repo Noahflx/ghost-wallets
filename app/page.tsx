@@ -41,8 +41,8 @@ export default function HomePage() {
             Send crypto to anyone, anywhere
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground text-balance mb-8 max-w-2xl mx-auto leading-relaxed">
-            Send USDC or PYUSD on Stellar to any email or phone number. No wallet required. Recipients claim funds with
-            a simple magic link.
+            Send USDC or PYUSD on Stellar to any email address. No wallet required. Recipients claim funds with a simple
+            magic link.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/dashboard">
@@ -69,8 +69,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-semibold mb-2">Instant Delivery</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Send USDC or PYUSD instantly to any email or phone number. Funds arrive in seconds on the Stellar
-                network.
+                Send USDC or PYUSD instantly to any email address. Funds arrive in seconds on the Stellar network.
               </p>
             </div>
             <div className="p-6 rounded-lg border border-border bg-card">
@@ -109,7 +108,7 @@ export default function HomePage() {
               <div>
                 <h3 className="text-xl font-semibold mb-2">Enter recipient details</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Simply enter the recipient's email or phone number and the amount you want to send.
+                  Simply enter the recipient's email and the amount you want to send.
                 </p>
               </div>
             </div>

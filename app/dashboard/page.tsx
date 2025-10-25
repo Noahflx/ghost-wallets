@@ -32,7 +32,7 @@ export default function DashboardPage() {
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold mb-2">Send Payment</h1>
             <p className="text-muted-foreground leading-relaxed">
-              Send USDC or PYUSD to anyone via email or phone number
+              Send USDC or PYUSD to anyone with an email address
             </p>
           </div>
 

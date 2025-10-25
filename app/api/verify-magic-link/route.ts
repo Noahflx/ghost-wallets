@@ -1,9 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { hashToken } from "@/lib/magic-link"
-
-// In-memory storage for demo (use database in production)
-// This should match the storage in send-payment route
-const magicLinks = new Map<string, any>()
+import { verifyMagicLink } from "@/lib/stellar"
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,33 +10,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Token is required" }, { status: 400 })
     }
 
-    // Hash the token to look it up
-    const hashedToken = hashToken(token)
-    const linkData = magicLinks.get(hashedToken)
+    const linkData = await verifyMagicLink(token)
 
     if (!linkData) {
       return NextResponse.json({ error: "Invalid or expired magic link" }, { status: 404 })
     }
 
-    // Check if expired
-    if (new Date() > new Date(linkData.expiresAt)) {
-      return NextResponse.json({ error: "Magic link has expired" }, { status: 410 })
-    }
-
-    // Check if already claimed
-    if (linkData.claimed) {
-      return NextResponse.json({ error: "Magic link has already been claimed" }, { status: 410 })
-    }
-
     // Return wallet info (without secret key for security)
     return NextResponse.json({
       success: true,
-      walletAddress: linkData.walletPublicKey,
-      contractAddress: linkData.contractAddress,
+      walletAddress: linkData.walletAddress,
+      contractAddress: linkData.contractAddress ?? null,
       amount: linkData.amount,
-      tokenSymbol: linkData.tokenSymbol,
-      recipientEmail: linkData.recipientEmail,
-      recipientPhone: linkData.recipientPhone,
+      tokenSymbol: linkData.currency,
+      recipientEmail: linkData.recipient,
+      senderName: linkData.senderName ?? null,
+      expiresAt: linkData.expiresAt,
+      transactionHash: linkData.fundingTxHash ?? null,
     })
   } catch (error) {
     console.error("Error verifying magic link:", error)
