@@ -48,13 +48,16 @@ export async function sendMagicLinkEmail(
   const transporter = getTransporter()
   const gmailUser = process.env.GMAIL_USER || "noahef2030@gmail.com"
 
+  // Format amount with commas
+  const formattedAmount = Number(amount).toLocaleString("en-US")
+
   const senderDisplayName = options.senderName
     ? `${options.senderName} via Ghost Wallets`
     : "Ghost Wallets"
 
   const subject = options.senderName
-    ? `${options.senderName} sent you ${amount} ${tokenSymbol}`
-    : `You've received ${amount} ${tokenSymbol}`
+    ? `${options.senderName} sent you ${formattedAmount} ${tokenSymbol}`
+    : `You've received ${formattedAmount} ${tokenSymbol}`
 
   const expiresText = options.expiresAt
     ? `This link will expire on ${new Date(options.expiresAt).toLocaleString()}.`
@@ -77,7 +80,7 @@ export async function sendMagicLinkEmail(
       <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden;">
         <div style="text-align: center; padding: 32px 24px 16px;">
           <img src="cid:logo" alt="Ghost Wallets" style="width: 64px; height: 64px; margin-bottom: 16px;" />
-          <h2 style="margin: 0; font-size: 22px; color: #0f172a;">You've received ${amount} ${tokenSymbol}!</h2>
+          <h2 style="margin: 0; font-size: 22px; color: #0f172a;">You've received ${formattedAmount} ${tokenSymbol}!</h2>
         </div>
         <div style="padding: 0 24px 32px;">
           <p style="margin-bottom: 16px; color: #334155; font-size: 15px;">
@@ -94,7 +97,7 @@ export async function sendMagicLinkEmail(
             <a href="${magicLinkUrl}"
               style="display: inline-block; background-color: #a78fe0; color: #ffffff; text-decoration: none;
                      padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px;">
-              Claim your ${amount} ${tokenSymbol}
+              Claim your ${formattedAmount} ${tokenSymbol}
             </a>
           </div>
           <p style="margin-bottom: 12px; color: #64748b; font-size: 13px;">${expiresText}</p>
@@ -108,8 +111,8 @@ export async function sendMagicLinkEmail(
 
   const text = [
     options.senderName
-      ? `${options.senderName} sent you ${amount} ${tokenSymbol} via Ghost Wallets.`
-      : `You've received ${amount} ${tokenSymbol} via Ghost Wallets.`,
+      ? `${options.senderName} sent you ${formattedAmount} ${tokenSymbol} via Ghost Wallets.`
+      : `You've received ${formattedAmount} ${tokenSymbol} via Ghost Wallets.`,
     "",
     `Claim your payment: ${magicLinkUrl}`,
     "",

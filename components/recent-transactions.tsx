@@ -93,7 +93,7 @@ export function RecentTransactions() {
 
     return (
       <div className="space-y-4">
-        {transactions.map((tx) => (
+        {transactions.slice(0, 1).map((tx) => (
           <div key={tx.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
