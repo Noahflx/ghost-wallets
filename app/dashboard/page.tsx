@@ -16,7 +16,7 @@ export default function DashboardPage() {
   const [showSuccess, setShowSuccess] = useState(false)
 
   // source of truth for balance animation
-  const balance = useMotionValue(60)
+  const balance = useMotionValue(7572.54)
   // plain string to render (fixes "Objects are not valid as a React child")
   const [displayBalance, setDisplayBalance] = useState(balance.get().toFixed(2))
   useMotionValueEvent(balance, "change", (v) => {
