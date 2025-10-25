@@ -1,0 +1,14 @@
+/Users/noah/Downloads/ghost-wallets/contracts/ghost-wallet/target/release/deps/serde-ad2c361448fe5998.d: /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/noah/Downloads/ghost-wallets/contracts/ghost-wallet/target/release/build/serde-21b400c346b35bb7/out/private.rs
+
+/Users/noah/Downloads/ghost-wallets/contracts/ghost-wallet/target/release/deps/libserde-ad2c361448fe5998.rlib: /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/noah/Downloads/ghost-wallets/contracts/ghost-wallet/target/release/build/serde-21b400c346b35bb7/out/private.rs
+
+/Users/noah/Downloads/ghost-wallets/contracts/ghost-wallet/target/release/deps/libserde-ad2c361448fe5998.rmeta: /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/noah/Downloads/ghost-wallets/contracts/ghost-wallet/target/release/build/serde-21b400c346b35bb7/out/private.rs
+
+/Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/noah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/noah/Downloads/ghost-wallets/contracts/ghost-wallet/target/release/build/serde-21b400c346b35bb7/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/noah/Downloads/ghost-wallets/contracts/ghost-wallet/target/release/build/serde-21b400c346b35bb7/out
