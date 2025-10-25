@@ -114,7 +114,11 @@ export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Funding mode</span>
                 <span className="font-medium uppercase tracking-wide text-xs">
-                  {paymentDetails.paymentMode === "testnet" ? "Testnet" : "Simulation"}
+                  {paymentDetails.paymentMode === "testnet"
+                    ? "Testnet"
+                    : paymentDetails.paymentMode === "sandbox"
+                    ? "Sandbox"
+                    : "Simulation"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
