@@ -1,9 +1,6 @@
 import { SendPaymentForm } from "@/components/send-payment-form"
 import { RecentTransactions } from "@/components/recent-transactions"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
 import Image from "next/image"
-
 
 export default function DashboardPage() {
   return (
@@ -11,28 +8,25 @@ export default function DashboardPage() {
       {/* Top bar */}
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-background/70 border-b border-border/40">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Back to Home"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back</span>
-          </Link>
-
           <div className="flex items-center gap-3">
-          <Image
-  src="/logo.png"
-  alt="Ghost Wallets logo"
-  width={32}
-  height={32}
-  className="rounded-lg"
-/>
+            <Image
+              src="/logo.png"
+              alt="Ghost Wallets logo"
+              width={32}
+              height={32}
+              className="rounded-lg"
+            />
 
             <span className="font-semibold text-base sm:text-lg leading-none">Ghost Wallets</span>
           </div>
 
-          <div className="w-10" />
+          <div className="flex items-center gap-3 text-xs sm:text-sm text-muted-foreground">
+            <span className="hidden sm:inline">Secure cross-border payouts</span>
+            <span className="inline-flex items-center gap-2 rounded-md border border-border/40 px-3 py-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
+              <span>Operational</span>
+            </span>
+          </div>
         </div>
 
         {/* Sub-nav */}
