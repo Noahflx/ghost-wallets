@@ -283,7 +283,10 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
             {/* Temporary Wallet Info */}
             <div className="pt-4 border-t border-border">
               <p className="text-xs text-muted-foreground">
-                <strong>Temporary Wallet:</strong> {walletData.walletAddress}
+              <strong>Temporary Wallet:</strong>{" "}
+              {walletData.walletAddress.length > 10
+              ? `${walletData.walletAddress.slice(0, 35)}...`
+              : walletData.walletAddress}             
               </p>
             </div>
           </CardContent>

@@ -248,14 +248,6 @@ export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
             <p className="text-xs text-muted-foreground">This note appears in the recipient's email.</p>
           </div>
 
-          {/* Info Alert */}
-          <Alert>
-            <AlertDescription className="text-sm leading-relaxed">
-              The recipient will receive a magic link at their email address. They don't need a crypto wallet to get
-              started.
-            </AlertDescription>
-          </Alert>
-
           {/* Submit Button */}
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
