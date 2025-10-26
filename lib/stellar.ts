@@ -1,4 +1,13 @@
-import { Keypair, SorobanRpc, TransactionBuilder, Operation, Asset, BASE_FEE, Networks } from "@stellar/stellar-sdk"
+import {
+  Keypair,
+  SorobanRpc,
+  TransactionBuilder,
+  Operation,
+  Asset,
+  BASE_FEE,
+  Networks,
+  Server as SorobanServer,
+} from "@stellar/stellar-sdk"
 import { createHash, randomBytes } from "crypto"
 import { execFile } from "child_process"
 import { promisify } from "util"
@@ -166,9 +175,11 @@ export interface StellarRuntimeDetails extends StellarNetworkContext {
 
 function computeNetworkContext(): StellarNetworkContext {
   const mode = getPaymentMode()
+  const defaultRpcUrl = mode === "sandbox" ? DEFAULT_SANDBOX_RPC_URL : DEFAULT_TESTNET_RPC_URL
   const rpcUrl =
+    process.env.NEXT_PUBLIC_STELLAR_RPC_URL ||
     process.env.STELLAR_RPC_URL ||
-    (mode === "sandbox" ? DEFAULT_SANDBOX_RPC_URL : DEFAULT_TESTNET_RPC_URL)
+    defaultRpcUrl
   const networkPassphrase = mode === "sandbox" ? "Standalone Network ; February 2017" : Networks.TESTNET
   const friendbotUrlBase = (
     process.env.STELLAR_FRIENDBOT_URL ||
@@ -241,12 +252,8 @@ function getSorobanServer(): SorobanRpc.Server | null {
   cachedServer = null
 
   try {
-    if (!SorobanRpc || typeof SorobanRpc.Server !== "function") {
-      console.warn("Soroban RPC client is unavailable. Falling back to mock behaviour.")
-      return cachedServer
-    }
-
-    cachedServer = new SorobanRpc.Server(rpcUrl)
+    cachedServer = new SorobanServer(rpcUrl) as unknown as SorobanRpc.Server
+    console.log("[v0] Soroban RPC client initialized at", rpcUrl)
   } catch (error) {
     console.warn("Failed to initialize Soroban RPC client. Using mock behaviour instead.", error)
     cachedServer = null
