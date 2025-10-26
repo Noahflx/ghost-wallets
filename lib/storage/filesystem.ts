@@ -3,14 +3,34 @@ import path from "path"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 
-function ensureDataDirectoryExists() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true })
+let dataDirectoryAvailable: boolean | null = null
+
+function ensureDataDirectoryExists(): boolean {
+  if (dataDirectoryAvailable === false) {
+    return false
+  }
+
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true })
+    }
+
+    dataDirectoryAvailable = true
+    return true
+  } catch (error) {
+    console.warn(
+      `Data directory ${DATA_DIR} is not writable. Falling back to in-memory storage.`,
+      error,
+    )
+    dataDirectoryAvailable = false
+    return false
   }
 }
 
 export function readJsonFile<T>(filename: string, fallback: T): T {
-  ensureDataDirectoryExists()
+  if (!ensureDataDirectoryExists()) {
+    return fallback
+  }
   const filePath = path.join(DATA_DIR, filename)
 
   if (!fs.existsSync(filePath)) {
@@ -27,13 +47,16 @@ export function readJsonFile<T>(filename: string, fallback: T): T {
 }
 
 export function writeJsonFile(filename: string, data: unknown): void {
-  ensureDataDirectoryExists()
+  if (!ensureDataDirectoryExists()) {
+    return
+  }
   const filePath = path.join(DATA_DIR, filename)
 
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8")
   } catch (error) {
     console.warn(`Failed to persist data to ${filename}.`, error)
+    dataDirectoryAvailable = false
   }
 }
 
