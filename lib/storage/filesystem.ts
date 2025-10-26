@@ -1,36 +1,28 @@
-import { mkdirSync, readFileSync, writeFileSync } from "fs"
-import { tmpdir } from "os"
+import fs from "fs"
+import os from "os"
 import path from "path"
 
 type JsonRecord = Record<string, any>
-
 const memoryStore: Record<string, JsonRecord> = {}
 
-let resolvedDataDirectory: string | null | undefined
+let dataDir = process.env.GHOST_WALLETS_DATA_DIR || path.join(process.cwd(), "data")
 
-function resolveWritableDataDirectory(): string | null {
-  if (resolvedDataDirectory !== undefined) {
-    return resolvedDataDirectory
-  }
+function ensureDataDirectoryExists(): string {
+  const fallbackDir = path.join(os.tmpdir(), "ghost-wallets-data")
 
-  const preferred = process.env.GHOST_WALLETS_DATA_DIR
-    ? path.resolve(process.env.GHOST_WALLETS_DATA_DIR)
-    : path.join(process.cwd(), "data")
-
-  const fallback = path.join(tmpdir(), "ghost-wallets")
-
-  for (const candidate of [preferred, fallback]) {
+  for (const candidate of [dataDir, fallbackDir]) {
     try {
-      mkdirSync(candidate, { recursive: true })
-      resolvedDataDirectory = candidate
-      return resolvedDataDirectory
+      if (!fs.existsSync(candidate)) {
+        fs.mkdirSync(candidate, { recursive: true })
+      }
+      dataDir = candidate
+      return dataDir
     } catch (error) {
-      // Ignore write failures – we'll fall back to in-memory storage below.
+      console.warn(`Failed to ensure data directory at ${candidate}.`, error)
     }
   }
 
-  resolvedDataDirectory = null
-  return resolvedDataDirectory
+  return dataDir
 }
 
 function getMemoryFallback<T>(filename: string, fallback: T): T {
@@ -38,16 +30,11 @@ function getMemoryFallback<T>(filename: string, fallback: T): T {
 }
 
 export function readJsonFile<T>(filename: string, fallback: T): T {
-  const dataDir = resolveWritableDataDirectory()
-
-  if (!dataDir) {
-    return getMemoryFallback(filename, fallback)
-  }
-
-  const filePath = path.join(dataDir, filename)
+  const dir = ensureDataDirectoryExists()
+  const filePath = path.join(dir, filename)
 
   try {
-    const contents = readFileSync(filePath, "utf-8")
+    const contents = fs.readFileSync(filePath, "utf-8")
     return JSON.parse(contents) as T
   } catch (error) {
     return getMemoryFallback(filename, fallback)
@@ -55,17 +42,11 @@ export function readJsonFile<T>(filename: string, fallback: T): T {
 }
 
 export function writeJsonFile(filename: string, data: unknown): void {
-  const dataDir = resolveWritableDataDirectory()
-
-  if (!dataDir) {
-    memoryStore[filename] = data as JsonRecord
-    return
-  }
-
-  const filePath = path.join(dataDir, filename)
+  const dir = ensureDataDirectoryExists()
+  const filePath = path.join(dir, filename)
 
   try {
-    writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8")
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8")
     memoryStore[filename] = data as JsonRecord
   } catch (error) {
     memoryStore[filename] = data as JsonRecord
@@ -73,6 +54,6 @@ export function writeJsonFile(filename: string, data: unknown): void {
 }
 
 export function getDataFilePath(filename: string): string {
-  const dataDir = resolveWritableDataDirectory()
-  return dataDir ? path.join(dataDir, filename) : filename
+  const dir = ensureDataDirectoryExists()
+  return path.join(dir, filename)
 }
