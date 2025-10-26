@@ -336,8 +336,8 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
     switch (actionResult.type) {
       case "keep":
         return (
-          <Alert className="border-green-200 bg-emerald-50">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+        <Alert className="border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+           <CheckCircle2 className="h-5 w-5 text-emerald-400" />
             <AlertTitle>Balance saved for later</AlertTitle>
             <AlertDescription>
               <p>

@@ -267,9 +267,6 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <p>© {new Date().getFullYear()} Ghost Wallets</p>
             <div className="flex items-center gap-5">
-              <a href="#" className="hover:text-indigo-500 transition-colors">Docs</a>
-              <a href="#" className="hover:text-indigo-500 transition-colors">Status</a>
-              <a href="#" className="hover:text-indigo-500 transition-colors">Compliance</a>
             </div>
           </div>
         </div>

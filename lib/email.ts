@@ -1,13 +1,10 @@
 import nodemailer from "nodemailer"
 import path from "path"
 import type { PaymentMode } from "./types/payments"
-import { getPaymentMode } from "./config/payment-mode"
 
 interface EmailOptions {
   senderName?: string
   expiresAt?: string
-  fundingMode: PaymentMode
-  explorerUrl?: string
   message?: string
 }
 
@@ -23,17 +20,12 @@ function escapeHtml(input: string): string {
 let cachedTransporter: nodemailer.Transporter | null | undefined
 
 function getTransporter(): nodemailer.Transporter {
-  if (cachedTransporter) {
-    return cachedTransporter
-  }
+  if (cachedTransporter) return cachedTransporter
 
   const gmailUser = process.env.GMAIL_USER || "noahef2030@gmail.com"
   const gmailAppPassword = process.env.GMAIL_APP_PASSWORD
-
   if (!gmailAppPassword) {
-    throw new Error(
-      "GMAIL_APP_PASSWORD environment variable is required to send magic link emails",
-    )
+    throw new Error("Missing GMAIL_APP_PASSWORD environment variable.")
   }
 
   cachedTransporter = nodemailer.createTransport({
@@ -48,7 +40,7 @@ function getTransporter(): nodemailer.Transporter {
 }
 
 /**
- * Send magic link email to recipient using Gmail SMTP
+ * Send clean, user-facing magic link email
  */
 export async function sendMagicLinkEmail(
   recipientEmail: string,
@@ -60,22 +52,18 @@ export async function sendMagicLinkEmail(
   const transporter = getTransporter()
   const gmailUser = process.env.GMAIL_USER || "noahef2030@gmail.com"
 
-  // Format amount with commas
   const formattedAmount = Number(amount).toLocaleString("en-US")
-
   const senderDisplayName = options.senderName
     ? `${options.senderName} via Ghost Wallets`
     : "Ghost Wallets"
 
   const subject = options.senderName
     ? `${options.senderName} sent you ${formattedAmount} ${tokenSymbol}`
-    : `You've received ${formattedAmount} ${tokenSymbol}`
+    : `You’ve received ${formattedAmount} ${tokenSymbol}`
 
   const expiresText = options.expiresAt
-    ? `This link will expire on ${new Date(options.expiresAt).toLocaleString()}.`
-    : "This link will expire in 7 days."
-
-  const fundingMode = options.fundingMode ?? getPaymentMode()
+    ? `This link expires on ${new Date(options.expiresAt).toLocaleString()}.`
+    : `This link expires in 7 days.`
 
   const messageHtml = options.message
     ? `<div style="margin: 20px 0; padding: 16px; background-color: #f1f5f9; border-radius: 8px;">
@@ -85,75 +73,63 @@ export async function sendMagicLinkEmail(
       </div>`
     : ""
 
-  const modeText =
-    fundingMode === "testnet"
-      ? options.explorerUrl
-        ? `This transfer executed on the Stellar testnet. You can verify the transaction <a href="${options.explorerUrl}" style="color: #6366f1;">on Stellar Expert</a>.`
-        : "This transfer executed on the Stellar testnet."
-      : fundingMode === "sandbox"
-      ? "This transfer executed against a local Soroban sandbox you control."
-      : "This transfer was simulated for the demo environment—no real funds moved yet."
-
-  const complianceNote =
-    "Ghost Wallets enforces sending limits and anti-phishing checks during the hackathon demo for recipient safety."
-
-  const html = `
-    <div style="background-color: #f8fafc; padding: 40px 0; font-family: Arial, sans-serif;">
-      <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden;">
-        <div style="text-align: center; padding: 32px 24px 16px;">
-          <img src="cid:logo" alt="Ghost Wallets" style="width: 64px; height: 64px; margin-bottom: 16px;" />
-          <h2 style="margin: 0; font-size: 22px; color: #0f172a;">You've received ${formattedAmount} ${tokenSymbol}!</h2>
+    const html = `
+    <div style="background-color:#f8fafc;padding:40px 0;font-family:Arial,sans-serif;">
+      <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;
+                  box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;">
+        <div style="text-align:center;padding:32px 24px 16px;">
+          <img src="cid:logo" alt="Ghost Wallets" style="width:64px;height:64px;margin-bottom:16px;" />
+          <h2 style="margin:0;font-size:22px;color:#0f172a;">
+            You’ve received ${formattedAmount} ${tokenSymbol}!
+          </h2>
         </div>
-        <div style="padding: 0 24px 32px;">
-          <p style="margin-bottom: 16px; color: #334155; font-size: 15px;">
+        <div style="padding:0 24px 32px;">
+          <p style="margin-bottom:16px;color:#334155;font-size:15px;">
             ${
               options.senderName
-                ? `<strong>${options.senderName}</strong> sent you funds via Ghost Wallets.`
-                : "You've been sent funds via Ghost Wallets."
+                ? `<strong>${escapeHtml(options.senderName)}</strong> sent you funds via Ghost Wallets.`
+                : `You’ve been sent funds via Ghost Wallets.`
             }
           </p>
           ${messageHtml}
-          <p style="margin-bottom: 24px; color: #334155; font-size: 15px;">
-            Click the secure link below to claim your payment. You'll be taken to Ghost Wallets to complete the process.
+          <p style="margin-bottom:24px;color:#334155;font-size:15px;">
+            Click below to claim your payment.
           </p>
-          <div style="text-align: center; margin-bottom: 32px;">
+          <div style="text-align:center;margin-bottom:32px;">
             <a href="${magicLinkUrl}"
-              style="display: inline-block; background-color: #a78fe0; color: #ffffff; text-decoration: none;
-                     padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px;">
-              Claim your ${formattedAmount} ${tokenSymbol}
+              style="display:inline-block;background-color:#a78fe0;color:#ffffff;text-decoration:none;
+                     padding:14px 28px;border-radius:8px;font-weight:bold;font-size:15px;">
+              Claim ${formattedAmount} ${tokenSymbol}
             </a>
           </div>
-          <p style="margin-bottom: 12px; color: #64748b; font-size: 13px;">${expiresText}</p>
-          <p style="margin-bottom: 12px; color: #64748b; font-size: 13px;">${modeText}</p>
-          <p style="color: #94a3b8; font-size: 12px;">${complianceNote}</p>
-          <p style="color: #94a3b8; font-size: 12px;">If you weren't expecting this email, you can safely ignore it.</p>
+          <p style="margin-bottom:12px;color:#64748b;font-size:13px;">${expiresText}</p>
+          <hr style="border:none;border-top:1px solid #e2e8f0;margin:32px 0;" />
+          <div style="text-align:center;color:#94a3b8;font-size:12px;line-height:1.6;">
+            <p style="margin:4px 0;">Ghost Wallets is a Stellar-powered payment platform for seamless digital transfers.</p>
+            <p style="margin:4px 0;">Built for simplicity — send crypto to anyone with just an email.</p>
+            <p style="margin:8px 0 0;">© ${new Date().getFullYear()} Ghost Wallets. All rights reserved.</p>
+            <p style="margin:4px 0;">
+              <a href="https://ghostwallets.app" style="color:#a78fe0;text-decoration:none;">ghostwallets</a> ·
+              <a href="https://twitter.com/ghostwallets" style="color:#a78fe0;text-decoration:none;">founder</a>
+            </p>
+          </div>
         </div>
       </div>
     </div>
-  `
+  `  
 
-  const textLines = [
+  const text = [
     options.senderName
       ? `${options.senderName} sent you ${formattedAmount} ${tokenSymbol} via Ghost Wallets.`
-      : `You've received ${formattedAmount} ${tokenSymbol} via Ghost Wallets.`,
+      : `You’ve received ${formattedAmount} ${tokenSymbol} via Ghost Wallets.`,
     "",
-  ]
-
-  if (options.message) {
-    textLines.push("Message:", options.message, "")
-  }
-
-  textLines.push(
+    options.message ? `Message: ${options.message}` : "",
+    "",
     `Claim your payment: ${magicLinkUrl}`,
     "",
     expiresText,
-    modeText.replace(/<[^>]+>/g, ""),
-    complianceNote,
-    "",
-    "If you weren't expecting this email, you can ignore it.",
-  )
-
-  const text = textLines.join("\n")
+    "If you weren’t expecting this, you can ignore this email.",
+  ].join("\n")
 
   await transporter.sendMail({
     from: `${senderDisplayName} <${gmailUser}>`,
