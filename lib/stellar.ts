@@ -6,7 +6,7 @@ import {
   BASE_FEE,
   Networks,
 } from "@stellar/stellar-sdk"
-import { SorobanRpc } from "stellar-sdk"
+import { SorobanRpc } from "@stellar/stellar-sdk"
 import { createHash, randomBytes } from "crypto"
 import { execFile } from "child_process"
 import { promisify } from "util"
