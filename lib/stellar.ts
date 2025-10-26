@@ -1,4 +1,4 @@
-import { Keypair, SorobanRpc, TransactionBuilder, Networks, Operation, Asset, BASE_FEE } from "@stellar/stellar-sdk"
+import { Keypair, SorobanRpc, TransactionBuilder, Operation, Asset, BASE_FEE, Networks } from "@stellar/stellar-sdk"
 import { createHash, randomBytes } from "crypto"
 import { execFile } from "child_process"
 import { promisify } from "util"
@@ -12,6 +12,7 @@ import {
 import { appendTransactionEvent, markTransactionClaimed } from "./transactions"
 import { readJsonFile, writeJsonFile } from "./storage/filesystem"
 import type { AssetType, PaymentMetadata, PaymentMode } from "./types/payments"
+import { getPaymentMode, onPaymentModeChange } from "./config/payment-mode"
 
 export interface SupportedAsset {
   code: string
@@ -89,7 +90,6 @@ const MAGIC_LINKS_FILENAME = "magic-links.json"
 const DEFAULT_TESTNET_RPC_URL = "https://soroban-testnet.stellar.org"
 const DEFAULT_SANDBOX_RPC_URL = "http://localhost:8000/soroban/rpc"
 const DEFAULT_SANDBOX_FRIENDBOT_URL = "http://localhost:8000/friendbot"
-const SANDBOX_NETWORK_PASSPHRASE = "Standalone Network ; February 2017"
 
 interface PersistedMagicLinkRecord
   extends Omit<MagicLinkRecord, "expiresAt" | "redeemedAt"> {
@@ -146,22 +146,57 @@ function persistMagicLinkStore() {
   writeJsonFile(MAGIC_LINKS_FILENAME, serializable)
 }
 
-const PAYMENT_MODE =
-  (process.env.STELLAR_PAYMENT_MODE?.toLowerCase() as PaymentMode | undefined) || "simulation"
-const RPC_URL =
-  process.env.STELLAR_RPC_URL ||
-  (PAYMENT_MODE === "sandbox" ? DEFAULT_SANDBOX_RPC_URL : DEFAULT_TESTNET_RPC_URL)
-const NETWORK_PASSPHRASE = PAYMENT_MODE === "sandbox" ? SANDBOX_NETWORK_PASSPHRASE : Networks.TESTNET
 const PREFUND_WITH_FRIENDBOT = process.env.STELLAR_PREFUND_WALLETS === "true"
-const FRIENDBOT_URL_BASE = (
-  process.env.STELLAR_FRIENDBOT_URL ||
-  (PAYMENT_MODE === "sandbox" ? DEFAULT_SANDBOX_FRIENDBOT_URL : "https://friendbot.stellar.org")
-).replace(/\/$/, "")
 const SOROBAN_CLI = process.env.SOROBAN_CLI_PATH || "soroban"
 const SANDBOX_IDENTITY = process.env.SOROBAN_SANDBOX_IDENTITY || "default"
 const SANDBOX_WASM_PATH =
   process.env.GHOST_WALLET_WASM_PATH ||
   "contracts/ghost-wallet/target/wasm32-unknown-unknown/release/ghost_wallet.optimized.wasm"
+
+interface StellarNetworkContext {
+  mode: PaymentMode
+  rpcUrl: string
+  networkPassphrase: string
+  friendbotUrlBase: string
+}
+
+export interface StellarRuntimeDetails extends StellarNetworkContext {
+  treasurySecretConfigured: boolean
+}
+
+function computeNetworkContext(): StellarNetworkContext {
+  const mode = getPaymentMode()
+  const rpcUrl =
+    process.env.STELLAR_RPC_URL ||
+    (mode === "sandbox" ? DEFAULT_SANDBOX_RPC_URL : DEFAULT_TESTNET_RPC_URL)
+  const networkPassphrase = mode === "sandbox" ? "Standalone Network ; February 2017" : Networks.TESTNET
+  const friendbotUrlBase = (
+    process.env.STELLAR_FRIENDBOT_URL ||
+    (mode === "sandbox" ? DEFAULT_SANDBOX_FRIENDBOT_URL : "https://friendbot.stellar.org")
+  ).replace(/\/$/, "")
+
+  return {
+    mode,
+    rpcUrl,
+    networkPassphrase,
+    friendbotUrlBase,
+  }
+}
+
+let networkContext = computeNetworkContext()
+
+function getNetworkContext(): StellarNetworkContext {
+  return networkContext
+}
+
+export function getStellarRuntimeDetails(): StellarRuntimeDetails {
+  const context = getNetworkContext()
+
+  return {
+    ...context,
+    treasurySecretConfigured: Boolean(process.env.STELLAR_TREASURY_SECRET_KEY),
+  }
+}
 
 let cachedServer: SorobanRpc.Server | null | undefined
 
@@ -188,7 +223,17 @@ function extractTransactionHash(output: string): string | null {
   return match ? match[0] : null
 }
 
+function resetSorobanServerCache() {
+  cachedServer = undefined
+}
+
 function getSorobanServer(): SorobanRpc.Server | null {
+  const { mode, rpcUrl } = getNetworkContext()
+
+  if (mode === "simulation") {
+    return null
+  }
+
   if (cachedServer !== undefined) {
     return cachedServer
   }
@@ -201,7 +246,7 @@ function getSorobanServer(): SorobanRpc.Server | null {
       return cachedServer
     }
 
-    cachedServer = new SorobanRpc.Server(RPC_URL)
+    cachedServer = new SorobanRpc.Server(rpcUrl)
   } catch (error) {
     console.warn("Failed to initialize Soroban RPC client. Using mock behaviour instead.", error)
     cachedServer = null
@@ -240,7 +285,9 @@ export async function deployGhostWallet(ownerPublicKey: string, recoveryEmail: s
   const fallbackContractId =
     process.env.GHOST_WALLET_CONTRACT_ID || "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
 
-  if (PAYMENT_MODE !== "sandbox") {
+  const { mode, rpcUrl, networkPassphrase } = getNetworkContext()
+
+  if (mode !== "sandbox") {
     return fallbackContractId
   }
 
@@ -263,9 +310,9 @@ export async function deployGhostWallet(ownerPublicKey: string, recoveryEmail: s
       "--wasm",
       SANDBOX_WASM_PATH,
       "--rpc-url",
-      RPC_URL,
+      rpcUrl,
       "--network-passphrase",
-      NETWORK_PASSPHRASE,
+      networkPassphrase,
       "--source",
       SANDBOX_IDENTITY,
     ])
@@ -282,9 +329,9 @@ export async function deployGhostWallet(ownerPublicKey: string, recoveryEmail: s
       "--id",
       deployedContractId,
       "--rpc-url",
-      RPC_URL,
+      rpcUrl,
       "--network-passphrase",
-      NETWORK_PASSPHRASE,
+      networkPassphrase,
       "--source",
       SANDBOX_IDENTITY,
       "--fn",
@@ -310,9 +357,15 @@ interface FriendbotSuccessResponse {
 
 const friendbotCache = new Map<string, PrefundMetadata>()
 
+onPaymentModeChange(() => {
+  networkContext = computeNetworkContext()
+  resetSorobanServerCache()
+  friendbotCache.clear()
+})
+
 async function prefundWithFriendbot(publicKey: string): Promise<PrefundMetadata | null> {
-  const shouldPrefund =
-    PAYMENT_MODE === "testnet" || PAYMENT_MODE === "sandbox" || PREFUND_WITH_FRIENDBOT
+  const { mode, friendbotUrlBase } = getNetworkContext()
+  const shouldPrefund = mode !== "simulation" || PREFUND_WITH_FRIENDBOT
 
   if (!shouldPrefund) {
     return null
@@ -323,7 +376,7 @@ async function prefundWithFriendbot(publicKey: string): Promise<PrefundMetadata 
   }
 
   try {
-    const response = await fetch(`${FRIENDBOT_URL_BASE}?addr=${encodeURIComponent(publicKey)}`)
+    const response = await fetch(`${friendbotUrlBase}?addr=${encodeURIComponent(publicKey)}`)
 
     if (!response.ok) {
       console.warn(`Friendbot funding failed with status ${response.status}. Continuing without prefund.`)
@@ -379,6 +432,7 @@ export async function sendToGhostWallet(
   tokenAddress: string,
 ): Promise<string> {
   const server = getSorobanServer()
+  const { networkPassphrase } = getNetworkContext()
 
   if (!server) {
     throw new Error("Soroban RPC server is not available")
@@ -391,7 +445,7 @@ export async function sendToGhostWallet(
     // Build transaction to send tokens
     const transaction = new TransactionBuilder(sourceAccount, {
       fee: BASE_FEE,
-      networkPassphrase: NETWORK_PASSPHRASE,
+      networkPassphrase,
     })
       .addOperation(
         Operation.payment({
@@ -516,14 +570,15 @@ export async function sendPayment(
   currency: string,
 ): Promise<PaymentResult> {
   const asset = getSupportedAsset(currency) ?? SUPPORTED_ASSETS.XLM
+  const { mode } = getNetworkContext()
 
-  if (PAYMENT_MODE === "testnet" || PAYMENT_MODE === "sandbox") {
+  if (mode === "testnet" || mode === "sandbox") {
     const treasurySecret = process.env.STELLAR_TREASURY_SECRET_KEY
-    const networkLabel = PAYMENT_MODE === "testnet" ? "Stellar testnet" : "Soroban sandbox"
+    const networkLabel = mode === "testnet" ? "Stellar testnet" : "Soroban sandbox"
 
     if (!treasurySecret) {
       console.warn(
-        `STELLAR_PAYMENT_MODE is set to ${PAYMENT_MODE} but STELLAR_TREASURY_SECRET_KEY is not configured. Falling back to simulation.`,
+        `Payment mode is set to ${mode} but STELLAR_TREASURY_SECRET_KEY is not configured. Falling back to simulation.`,
       )
     } else if (asset.type !== "native") {
       console.warn(
@@ -534,9 +589,9 @@ export async function sendPayment(
         const txHash = await sendToGhostWallet(treasurySecret, walletAddress, amount, asset.code)
         return {
           txHash,
-          mode: PAYMENT_MODE,
+          mode,
           isSimulated: false,
-          explorerUrl: buildExplorerUrl(txHash, PAYMENT_MODE),
+          explorerUrl: buildExplorerUrl(txHash, mode),
           assetCode: asset.code,
           assetType: asset.type,
           assetIssuer: asset.issuer,
@@ -647,7 +702,7 @@ export async function generateMagicLink(
   const hashedToken = hashToken(token)
   const expiresAt = new Date(Date.now() + MAGIC_LINK_EXPIRATION_MS)
 
-  const fundingMode = options.fundingMode ?? PAYMENT_MODE
+  const fundingMode = options.fundingMode ?? getNetworkContext().mode
   const walletAddress = wallet.address
   const walletSecret = wallet.secretKey
   const asset = getSupportedAsset(currency) ?? SUPPORTED_ASSETS.XLM
@@ -967,7 +1022,7 @@ function simulateContractInvocation(
   return {
     txHash: hash.digest("hex"),
     simulated: true,
-    mode: PAYMENT_MODE,
+    mode: getNetworkContext().mode,
     logs: [
       `Simulated ${fn} with context ${JSON.stringify(context)}`,
       "No on-chain transaction submitted (demo mode)",
@@ -982,7 +1037,9 @@ async function invokeGhostWalletContract(
   args: string[],
   context: Record<string, string>,
 ): Promise<ContractInvocationResult> {
-  if (PAYMENT_MODE !== "sandbox") {
+  const { mode, rpcUrl, networkPassphrase } = getNetworkContext()
+
+  if (mode !== "sandbox") {
     return simulateContractInvocation(contractAddress, fn, context)
   }
 
@@ -993,9 +1050,9 @@ async function invokeGhostWalletContract(
       "--id",
       contractAddress,
       "--rpc-url",
-      RPC_URL,
+      rpcUrl,
       "--network-passphrase",
-      NETWORK_PASSPHRASE,
+      networkPassphrase,
       "--source",
       SANDBOX_IDENTITY,
       "--fn",
@@ -1009,7 +1066,7 @@ async function invokeGhostWalletContract(
     return {
       txHash,
       simulated: false,
-      mode: PAYMENT_MODE,
+      mode,
       logs: [output.trim()],
       contractAddress,
     }
