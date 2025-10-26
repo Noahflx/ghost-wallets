@@ -111,7 +111,12 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Created wallet:", wallet.address)
 
     // Send payment to the wallet
-    const paymentResult = await sendPayment(wallet.address, normalizedAmount, normalizedCurrency)
+    const paymentResult = await sendPayment(
+      wallet.address,
+      normalizedAmount,
+      normalizedCurrency,
+      wallet.secretKey,
+    )
     console.log("[v0] Payment sent, tx hash:", paymentResult.txHash)
 
     // Generate magic link for recipient
