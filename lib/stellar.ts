@@ -44,20 +44,24 @@ function resolveIssuer(
   const candidate = envValue?.trim()
   const fb = fallback.trim()
 
+  // 1) Prefer env if present and valid
   if (candidate && StrKey.isValidEd25519PublicKey(candidate)) {
     return candidate
   }
 
+  // 2) If env present but invalid, warn and try fallback
   if (candidate && !StrKey.isValidEd25519PublicKey(candidate)) {
     console.warn(
       `[ghost] ${envVariableName} is set but invalid for ${assetCode}. Falling back to default issuer.`,
     )
   }
 
+  // 3) Validate fallback; if valid, use it
   if (StrKey.isValidEd25519PublicKey(fb)) {
     return fb
   }
 
+  // 4) Both invalid → explicit error
   throw new Error(
     `No valid issuer for ${assetCode}. Set ${envVariableName} to a valid Ed25519 public key or fix the fallback.`,
   )
