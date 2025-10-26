@@ -1,17 +1,31 @@
 import fs from "fs"
+import os from "os"
 import path from "path"
 
-const DATA_DIR = path.join(process.cwd(), "data")
+let dataDir = process.env.GHOST_WALLETS_DATA_DIR || path.join(process.cwd(), "data")
 
-function ensureDataDirectoryExists() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true })
+function ensureDataDirectoryExists(): string {
+  const fallbackDir = path.join(os.tmpdir(), "ghost-wallets-data")
+
+  for (const candidate of [dataDir, fallbackDir]) {
+    try {
+      if (!fs.existsSync(candidate)) {
+        fs.mkdirSync(candidate, { recursive: true })
+      }
+
+      dataDir = candidate
+      return dataDir
+    } catch (error) {
+      console.warn(`Failed to ensure data directory at ${candidate}.`, error)
+    }
   }
+
+  return dataDir
 }
 
 export function readJsonFile<T>(filename: string, fallback: T): T {
-  ensureDataDirectoryExists()
-  const filePath = path.join(DATA_DIR, filename)
+  const dir = ensureDataDirectoryExists()
+  const filePath = path.join(dir, filename)
 
   if (!fs.existsSync(filePath)) {
     return fallback
@@ -27,8 +41,8 @@ export function readJsonFile<T>(filename: string, fallback: T): T {
 }
 
 export function writeJsonFile(filename: string, data: unknown): void {
-  ensureDataDirectoryExists()
-  const filePath = path.join(DATA_DIR, filename)
+  const dir = ensureDataDirectoryExists()
+  const filePath = path.join(dir, filename)
 
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8")
@@ -38,6 +52,6 @@ export function writeJsonFile(filename: string, data: unknown): void {
 }
 
 export function getDataFilePath(filename: string): string {
-  ensureDataDirectoryExists()
-  return path.join(DATA_DIR, filename)
+  const dir = ensureDataDirectoryExists()
+  return path.join(dir, filename)
 }
