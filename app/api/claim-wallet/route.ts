@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { claimFunds } from "@/lib/stellar"
+import { claimFunds, transferGhostWalletOwnership } from "@/lib/stellar"
 import { enforceRateLimit } from "@/lib/rate-limit"
 
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000
@@ -45,8 +45,20 @@ export async function POST(request: NextRequest) {
 
     const claimResult = await claimFunds(token, userAddress)
 
-    // TODO: Transfer ownership of the ghost wallet contract to userAddress
-    // This would call the contract's transfer_ownership function
+    let ownershipTransfer = null
+
+    try {
+      const transferResult = await transferGhostWalletOwnership(token, userAddress)
+      ownershipTransfer = {
+        txHash: transferResult.txHash,
+        simulated: transferResult.simulated,
+        mode: transferResult.mode,
+        contractAddress: transferResult.contractAddress ?? null,
+        logs: transferResult.logs,
+      }
+    } catch (error) {
+      console.error("Failed to transfer ghost wallet ownership:", error)
+    }
 
     return NextResponse.json({
       success: true,
@@ -59,6 +71,7 @@ export async function POST(request: NextRequest) {
       claimedBy: claimResult.claimedBy ?? userAddress,
       paymentMode: claimResult.fundingMode,
       explorerUrl: claimResult.explorerUrl ?? null,
+      ownershipTransfer,
     })
   } catch (error) {
     console.error("Error claiming wallet:", error)

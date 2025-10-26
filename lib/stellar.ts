@@ -1067,6 +1067,47 @@ export async function requestOwnershipChangeViaEmail(
   return result
 }
 
+export async function transferGhostWalletOwnership(
+  token: string,
+  newOwner: string,
+): Promise<ContractInvocationResult> {
+  const record = getMagicLinkRecordOrThrow(token)
+  const trimmedOwner = newOwner.trim()
+
+  if (!trimmedOwner) {
+    throw new Error("A destination owner address is required to transfer ownership")
+  }
+
+  const context = {
+    token: hashToken(token),
+    newOwner: trimmedOwner,
+  }
+
+  const contractAddress = record.contractAddress
+
+  const result = contractAddress
+    ? await invokeGhostWalletContract(
+        contractAddress,
+        "transfer_ownership",
+        ["--new_owner", trimmedOwner],
+        context,
+      )
+    : simulateContractInvocation(contractAddress, "transfer_ownership", context)
+
+  appendTransactionEvent(record.hashedToken, {
+    type: "ownership-transferred",
+    timestamp: new Date().toISOString(),
+    data: {
+      newOwner: trimmedOwner,
+      simulated: result.simulated,
+      txHash: result.txHash,
+      contractAddress: contractAddress ?? null,
+    },
+  })
+
+  return result
+}
+
 export async function forwardBalanceToSmartWallet(
   token: string,
   destinationWallet: string,
