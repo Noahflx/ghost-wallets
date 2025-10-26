@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { useRef, useState } from "react"
+import { useRef, useEffect, useState } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import {
   ArrowRight,
@@ -45,25 +45,70 @@ export default function LandingPage() {
   )
 }
 
-function SiteChrome() {
+export function SiteChrome() {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setIsCollapsed(window.scrollY > 40)
+    window.addEventListener("scroll", onScroll)
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
   return (
-    <header className="sticky top-0 z-40 border-b border-border/40 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
-          {/* Tiny logo box */}
-          <Image src="/logo.png" alt="Ghost Wallets logo" width={32} height={32} className="rounded-md" />
-          <span className="text-sm font-semibold tracking-tight group-hover:text-primary transition-colors">
+    <motion.header
+      animate={{
+        height: isCollapsed ? 56 : 64,
+        backgroundColor: "rgba(var(--background), 0.7)",
+        backdropFilter: "blur(10px)",
+      }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className="sticky top-0 z-40 border-b border-border/40 supports-[backdrop-filter]:bg-background/70"
+    >
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 h-full flex items-center justify-between">
+        {/* Left side: logo + text */}
+        <Link href="/" className="flex items-center gap-2 group">
+          <motion.div
+            animate={{ width: isCollapsed ? 24 : 32, height: isCollapsed ? 24 : 32 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="relative"
+          >
+            <Image
+              src="/logo.png"
+              alt="Ghost Wallets logo"
+              fill
+              className="object-contain rounded-md"
+            />
+          </motion.div>
+
+          <motion.span
+            animate={{
+              opacity: isCollapsed ? 0 : 1,
+              y: isCollapsed ? 4 : 0,
+            }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="text-sm font-semibold tracking-tight text-foreground"
+          >
             Ghost Wallets
-          </span>
+          </motion.span>
         </Link>
 
+        {/* Center nav (hidden on mobile) */}
         <nav className="hidden md:flex items-center gap-6 text-sm">
-          <Link href="#how" className="text-muted-foreground hover:text-foreground transition-colors">How it works</Link>
-          <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</Link>
-          <Link href="#preview" className="text-muted-foreground hover:text-foreground transition-colors">Preview</Link>
-          <Link href="#docs" className="text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
+          <Link href="#how" className="text-muted-foreground hover:text-foreground transition-colors">
+            How it works
+          </Link>
+          <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+            Features
+          </Link>
+          <Link href="#preview" className="text-muted-foreground hover:text-foreground transition-colors">
+            Preview
+          </Link>
+          <Link href="#docs" className="text-muted-foreground hover:text-foreground transition-colors">
+            Docs
+          </Link>
         </nav>
 
+        {/* Right side buttons */}
         <div className="flex items-center gap-3">
           <Link
             href="#docs"
@@ -79,7 +124,7 @@ function SiteChrome() {
           </Link>
         </div>
       </div>
-    </header>
+    </motion.header>
   )
 }
 
@@ -436,7 +481,7 @@ function FeatureGrid() {
     <section id="features" className="py-14 md:py-20 border-t border-border/30">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <h3 className="text-2xl md:text-3xl font-semibold tracking-tight">Why this hits different</h3>
-        <p className="mt-3 text-muted-foreground max-w-prose">Fast, legible, and hard to mess up. Built for real teams, not just crypto natives.</p>
+        <p className="mt-3 text-muted-foreground max-w-prose">Fast, legible, and hard to mess up. Built for real people, not just crypto natives.</p>
 
         <div className="mt-8 grid md:grid-cols-3 gap-6">
           {[
