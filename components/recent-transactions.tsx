@@ -154,24 +154,6 @@ export function RecentTransactions() {
                   </Badge>
                 )}
               </div>
-              {tx.transactionHash && (
-                <div className="text-xs text-muted-foreground">
-                  {tx.isSimulated ? (
-                    <span title={tx.transactionHash}>Simulated hash {tx.transactionHash.slice(0, 10)}…</span>
-                  ) : tx.explorerUrl ? (
-                    <a
-                      href={tx.explorerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline"
-                    >
-                      View on Stellar Expert
-                    </a>
-                  ) : (
-                    <span title={tx.transactionHash}>Hash {tx.transactionHash.slice(0, 10)}…</span>
-                  )}
-                </div>
-              )}
               {tx.prefundTransactionHash && (
                 <div className="text-xs text-muted-foreground flex items-center justify-end gap-1">
                   <Sparkles className="h-3 w-3" />
