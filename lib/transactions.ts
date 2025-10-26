@@ -1,15 +1,23 @@
 import crypto from "crypto"
 
 import { readJsonFile, writeJsonFile } from "./storage/filesystem"
-import type { PaymentMode } from "./types/payments"
+import type { AssetType, PaymentMode } from "./types/payments"
 
 export type TransactionStatus = "sent" | "claimed" | "failed"
+
+export interface TransactionEvent {
+  type: string
+  timestamp: string
+  data?: Record<string, unknown>
+}
 
 export interface TransactionRecord {
   id: string
   recipient: string
   amount: string
   currency: string
+  assetType: AssetType
+  assetIssuer?: string
   status: TransactionStatus
   walletAddress: string
   transactionHash?: string
@@ -28,12 +36,17 @@ export interface TransactionRecord {
   prefundLedger?: number
   prefundedAt?: string
   claimedBy?: string
+  events: TransactionEvent[]
 }
+
+export interface TransactionEventInput extends TransactionEvent {}
 
 interface RecordTransactionInput {
   recipient: string
   amount: string
   currency: string
+  assetType: AssetType
+  assetIssuer?: string
   walletAddress: string
   transactionHash?: string
   magicLinkUrl: string
@@ -47,6 +60,7 @@ interface RecordTransactionInput {
   prefundLedger?: number
   prefundedAt?: string
   claimedBy?: string
+  events?: TransactionEventInput[]
 }
 
 const globalStores = globalThis as typeof globalThis & {
@@ -55,13 +69,18 @@ const globalStores = globalThis as typeof globalThis & {
 
 const TRANSACTIONS_FILENAME = "transactions.json"
 
-interface PersistedTransactionRecord extends TransactionRecord {}
+interface PersistedTransactionRecord extends Omit<TransactionRecord, "events"> {
+  events?: TransactionEvent[]
+  assetType?: AssetType
+}
 
 function hydrateTransactionStore(): Map<string, TransactionRecord> {
   const persisted = readJsonFile<Record<string, PersistedTransactionRecord>>(TRANSACTIONS_FILENAME, {})
   const entries = Object.entries(persisted).map<[string, TransactionRecord]>(([key, record]) => {
     const fundingMode = record.fundingMode ?? "simulation"
     const isSimulated = record.isSimulated ?? fundingMode === "simulation"
+    const assetType: AssetType = record.assetType ?? "native"
+    const events = record.events ?? []
 
     return [
       key,
@@ -69,6 +88,8 @@ function hydrateTransactionStore(): Map<string, TransactionRecord> {
         ...record,
         fundingMode,
         isSimulated,
+        assetType,
+        events,
       },
     ]
   })
@@ -87,7 +108,7 @@ function persistTransactionStore() {
   const serializable: Record<string, PersistedTransactionRecord> = {}
 
   for (const [key, record] of transactionStore.entries()) {
-    serializable[key] = record
+    serializable[key] = { ...record }
   }
 
   writeJsonFile(TRANSACTIONS_FILENAME, serializable)
@@ -97,11 +118,27 @@ export function recordTransaction(input: RecordTransactionInput): TransactionRec
   const id = crypto.randomUUID()
   const timestamp = new Date().toISOString()
 
+  const initialEvents =
+    input.events && input.events.length > 0
+      ? input.events
+      : [
+          {
+            type: "transaction-recorded",
+            timestamp,
+            data: {
+              mode: input.fundingMode,
+              isSimulated: input.isSimulated,
+            },
+          },
+        ]
+
   const record: TransactionRecord = {
     id,
     recipient: input.recipient,
     amount: input.amount,
     currency: input.currency,
+    assetType: input.assetType,
+    assetIssuer: input.assetIssuer,
     status: "sent",
     walletAddress: input.walletAddress,
     transactionHash: input.transactionHash,
@@ -118,11 +155,29 @@ export function recordTransaction(input: RecordTransactionInput): TransactionRec
     prefundLedger: input.prefundLedger,
     prefundedAt: input.prefundedAt,
     claimedBy: input.claimedBy,
+    events: initialEvents,
   }
 
   transactionStore.set(input.magicLinkTokenHash, record)
   persistTransactionStore()
   return record
+}
+
+export function appendTransactionEvent(
+  magicLinkTokenHash: string,
+  event: TransactionEventInput,
+): TransactionRecord | null {
+  const existing = transactionStore.get(magicLinkTokenHash)
+
+  if (!existing) {
+    return null
+  }
+
+  const events = existing.events.concat(event)
+  const updated: TransactionRecord = { ...existing, events, updatedAt: event.timestamp }
+  transactionStore.set(magicLinkTokenHash, updated)
+  persistTransactionStore()
+  return updated
 }
 
 export function markTransactionClaimed(
@@ -137,6 +192,15 @@ export function markTransactionClaimed(
   }
 
   const claimedAt = new Date().toISOString()
+  const event: TransactionEventInput = {
+    type: "claimed",
+    timestamp: claimedAt,
+    data: {
+      claimTransactionHash: claimTransactionHash ?? existing.claimTransactionHash,
+      claimedBy: claimedBy ?? existing.claimedBy,
+    },
+  }
+
   const updatedRecord: TransactionRecord = {
     ...existing,
     status: "claimed",
@@ -144,6 +208,7 @@ export function markTransactionClaimed(
     updatedAt: claimedAt,
     claimTransactionHash: claimTransactionHash ?? existing.claimTransactionHash,
     claimedBy: claimedBy ?? existing.claimedBy,
+    events: existing.events.concat(event),
   }
 
   transactionStore.set(magicLinkTokenHash, updatedRecord)
