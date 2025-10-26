@@ -9,10 +9,11 @@ import {
   hashToken,
   isMagicLinkExpired,
 } from "./magic-link"
-import { markTransactionClaimed } from "./transactions"
+import { markTransactionClaimed, recordTransaction } from "./transactions"
 import { readJsonFile, writeJsonFile } from "./storage/filesystem"
 import type { PaymentMode } from "./types/payments"
 import type { PaymentMetadata } from "./types/payments"
+import { sendNotification } from "./notifications"
 
 interface MagicLinkRecord {
   hashedToken: string
@@ -32,6 +33,7 @@ interface MagicLinkRecord {
   fundingMode: PaymentMode
   explorerUrl?: string
   claimedBy?: string
+  forwardedTo?: string[]
 }
 
 const execFileAsync = promisify(execFile)
@@ -660,5 +662,128 @@ export async function claimFunds(token: string, destinationAddress?: string): Pr
     fundingMode: record.fundingMode,
     explorerUrl,
     claimedBy: claimDestination,
+  }
+}
+
+interface ForwardMagicLinkOptions {
+  senderName?: string | null
+  message?: string | null
+}
+
+export interface ForwardMagicLinkResult {
+  amount: string
+  currency: string
+  recipient: string
+  walletAddress: string
+  contractAddress?: string
+  transactionHash: string
+  newMagicLinkUrl: string
+  magicLinkTokenHash: string
+  magicLinkExpiresAt: string
+  paymentMode: PaymentMode
+  explorerUrl?: string
+  simulated: boolean
+}
+
+export async function forwardMagicLink(
+  token: string,
+  newRecipient: string,
+  options: ForwardMagicLinkOptions = {},
+): Promise<ForwardMagicLinkResult> {
+  const hashedToken = hashToken(token)
+  const record = magicLinkStore.get(hashedToken)
+
+  if (!record) {
+    throw new Error("This transfer could not be found")
+  }
+
+  if (record.redeemed) {
+    throw new Error("This transfer has already been claimed or forwarded")
+  }
+
+  if (isMagicLinkExpired(record.expiresAt)) {
+    magicLinkStore.delete(hashedToken)
+    persistMagicLinkStore()
+    throw new Error("This transfer has expired")
+  }
+
+  const sanitizedRecipient = newRecipient.trim().toLowerCase()
+
+  if (!sanitizedRecipient || !sanitizedRecipient.includes("@")) {
+    throw new Error("A valid email address is required")
+  }
+
+  const wallet = await createWallet(sanitizedRecipient)
+  const paymentResult = await sendPayment(wallet.address, record.amount, record.currency)
+
+  const senderName = options.senderName ?? record.senderName
+  const message = options.message ?? record.message
+
+  const magicLink = await generateMagicLink(
+    sanitizedRecipient,
+    wallet,
+    record.amount,
+    record.currency,
+    paymentResult.txHash,
+    {
+      contractAddress: wallet.contractAddress,
+      senderName: senderName ?? undefined,
+      message: message ?? undefined,
+      fundingMode: paymentResult.mode,
+      explorerUrl: paymentResult.explorerUrl,
+    },
+  )
+
+  const forwardedTo = new Set(record.forwardedTo ?? [])
+  forwardedTo.add(sanitizedRecipient)
+
+  record.redeemed = true
+  record.redeemedAt = new Date()
+  record.claimedBy = `forward:${sanitizedRecipient}`
+  record.forwardedTo = Array.from(forwardedTo)
+  magicLinkStore.set(hashedToken, record)
+  persistMagicLinkStore()
+
+  markTransactionClaimed(hashedToken, paymentResult.txHash, record.claimedBy)
+
+  recordTransaction({
+    recipient: sanitizedRecipient,
+    amount: record.amount,
+    currency: record.currency,
+    walletAddress: wallet.address,
+    transactionHash: paymentResult.txHash,
+    magicLinkUrl: magicLink.url,
+    magicLinkTokenHash: magicLink.hashedToken,
+    senderName: senderName ?? undefined,
+    message: message ?? undefined,
+    fundingMode: paymentResult.mode,
+    explorerUrl: paymentResult.explorerUrl,
+    isSimulated: paymentResult.isSimulated,
+    prefundTransactionHash: wallet.prefund?.txHash,
+    prefundLedger: wallet.prefund?.ledger,
+    prefundedAt: wallet.prefund?.fundedAt,
+  })
+
+  await sendNotification(sanitizedRecipient, magicLink.url, record.amount, record.currency, {
+    senderName: senderName ?? undefined,
+    expiresAt: magicLink.expiresAt,
+    fundingMode: paymentResult.mode,
+    explorerUrl: paymentResult.explorerUrl,
+    message: message ?? undefined,
+  })
+
+  return {
+    amount: record.amount,
+    currency: record.currency,
+    recipient: sanitizedRecipient,
+    walletAddress: wallet.address,
+    contractAddress: wallet.contractAddress,
+    transactionHash: paymentResult.txHash,
+    newMagicLinkUrl: magicLink.url,
+    magicLinkTokenHash: magicLink.hashedToken,
+    magicLinkExpiresAt: magicLink.expiresAt,
+    paymentMode: paymentResult.mode,
+    explorerUrl: paymentResult.explorerUrl,
+    simulated: paymentResult.isSimulated,
   }
 }
