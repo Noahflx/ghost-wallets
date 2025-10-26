@@ -6,6 +6,15 @@ export const metadata: Metadata = {
   title: "Ghost Wallets Dashboard",
   description: "Manage cross-border payouts and recent activity in Ghost Wallets.",
   generator: "v0.app",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png" }],
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -17,11 +26,6 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="stylesheet" href="https://use.typekit.net/jhz2dlr.css" />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        {/* If you’re using a PNG or SVG instead, swap it out:
-            <link rel="icon" type="image/png" href="/favicon.png" />
-            <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        */}
       </head>
       <body className="font-sans antialiased">
         {children}
