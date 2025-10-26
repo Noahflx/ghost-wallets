@@ -32,7 +32,7 @@ export interface SupportedAsset {
   description: string
 }
 
-const FALLBACK_TESTNET_USDC_ISSUER = "GCBYRCYEDXHKYZIB5PSLBAG3H7U7AE3K3EUKMLWOZOHJAMMZONKBBVND"
+const FALLBACK_TESTNET_USDC_ISSUER = "GA5ZSE7YVY3C6YYK4NJU4FG3NZNXY6UJXQY5CXXW3FUKP6XUHC5DYV6P"
 const FALLBACK_TESTNET_PYUSD_ISSUER = "GAAO4Y7M3YZQ6UQNOBAUGJSC7EDWUAJ4ZONN2NT6SCV4R5D3H6N4WIAQ"
 
 function resolveIssuer(
@@ -41,28 +41,26 @@ function resolveIssuer(
   assetCode: string,
   envVariableName: string,
 ): string {
-  const normalizedFallback = fallback.trim()
-
-  if (!StrKey.isValidEd25519PublicKey(normalizedFallback)) {
-    throw new Error(
-      `Fallback issuer for ${assetCode} is invalid. Set ${envVariableName} to a valid Ed25519 public key.`,
-    )
-  }
   const candidate = envValue?.trim()
+  const fb = fallback.trim()
 
-  if (!candidate) {
-    console.warn(`[v0] Using default fallback issuer for ${assetCode} on testnet.`)
-    return normalizedFallback
+  if (candidate && StrKey.isValidEd25519PublicKey(candidate)) {
+    return candidate
   }
 
-  if (!StrKey.isValidEd25519PublicKey(candidate)) {
+  if (candidate && !StrKey.isValidEd25519PublicKey(candidate)) {
     console.warn(
-      `[v0] Provided issuer for ${assetCode} is invalid. Using default fallback issuer.`,
+      `[ghost] ${envVariableName} is set but invalid for ${assetCode}. Falling back to default issuer.`,
     )
-    return normalizedFallback
   }
 
-  return candidate
+  if (StrKey.isValidEd25519PublicKey(fb)) {
+    return fb
+  }
+
+  throw new Error(
+    `No valid issuer for ${assetCode}. Set ${envVariableName} to a valid Ed25519 public key or fix the fallback.`,
+  )
 }
 
 const DEFAULT_TESTNET_USDC_ISSUER = resolveIssuer(
