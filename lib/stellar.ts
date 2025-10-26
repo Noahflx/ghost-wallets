@@ -51,12 +51,13 @@ function resolveIssuer(
   const candidate = envValue?.trim()
 
   if (!candidate) {
+    console.warn(`[v0] Using default fallback issuer for ${assetCode} on testnet.`)
     return normalizedFallback
   }
 
   if (!StrKey.isValidEd25519PublicKey(candidate)) {
     console.warn(
-      `[v0] Provided issuer for ${assetCode} is invalid. Falling back to default issuer.`,
+      `[v0] Provided issuer for ${assetCode} is invalid. Using default fallback issuer.`,
     )
     return normalizedFallback
   }
