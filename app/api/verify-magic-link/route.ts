@@ -1,20 +1,26 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { verifyMagicLink } from "@/lib/stellar"
 import { enforceRateLimit } from "@/lib/rate-limit"
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000
 const RATE_LIMIT_MAX_REQUESTS = 10
 
-function extractIdentifier(request: NextRequest): string {
-  const header = request.headers.get("x-forwarded-for")
-  if (!header) {
-    return request.ip ?? "anonymous"
-  }
+function extractIdentifier(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for")
+  const vercelIp = request.headers.get("x-vercel-ip")
+  const realIp = request.headers.get("x-real-ip")
+  const cfConnectingIp = request.headers.get("cf-connecting-ip")
 
-  return header.split(",")[0]?.trim() || request.ip || "anonymous"
+  const candidate =
+    forwardedFor?.split(",")[0]?.trim() ||
+    vercelIp?.trim() ||
+    realIp?.trim() ||
+    cfConnectingIp?.trim()
+
+  return candidate && candidate.length > 0 ? candidate : "anonymous"
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { token } = body
