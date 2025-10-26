@@ -34,6 +34,12 @@ export interface SupportedAsset {
 
 const FALLBACK_TESTNET_USDC_ISSUER = "GA5ZSE7YVY3C6YYK4NJU4FG3NZNXY6UJXQY5CXXW3FUKP6XUHC5DYV6P"
 const FALLBACK_TESTNET_PYUSD_ISSUER = "GAAO4Y7M3YZQ6UQNOBAUGJSC7EDWUAJ4ZONN2NT6SCV4R5D3H6N4WIAQ"
+console.log("[ghost debug]", {
+  network: process.env.STELLAR_PAYMENT_MODE,
+  usdcIssuer: process.env.STELLAR_TESTNET_USDC_ISSUER,
+  valid: process.env.STELLAR_TESTNET_USDC_ISSUER && 
+         StrKey.isValidEd25519PublicKey(process.env.STELLAR_TESTNET_USDC_ISSUER),
+})
 
 function resolveIssuer(
   envValue: string | undefined,
