@@ -7,7 +7,7 @@ Canva Pitch Deck:
 https://www.canva.com/design/DAG22iyvGOQ/cSX7Vw5lphX2chanRIPPGw/edit?utm_content=DAG22iyvGOQ&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 
 
-Loom: https://www.loom.com/share/47db8be8ceb04e8a844587e44dabcf99
+Loom (demo + technical walkthrough): https://www.loom.com/share/47db8be8ceb04e8a844587e44dabcf99
 
 
 Ghost Wallets
