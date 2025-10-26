@@ -60,8 +60,8 @@ STELLAR_FRIENDBOT_URL="https://friendbot.stellar.org"
 GMAIL_USER="noahef2030@gmail.com" # optional override
 GMAIL_APP_PASSWORD="${YOUR_GMAIL_APP_PASSWORD}"
 
-# Public URL for magic link generation (defaults to http://localhost:3000)
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+# Public URL for magic link generation (defaults to https://ghost-wallets.vercel.app)
+NEXT_PUBLIC_APP_URL="https://ghost-wallets.vercel.app"
 ```
 
 5. Build and deploy the smart contract:
@@ -80,7 +80,7 @@ chmod +x scripts/deploy-contract.sh
 npm run dev
 \`\`\`
 
-7. Open [http://localhost:3000](http://localhost:3000)
+7. Open [https://ghost-wallets.vercel.app](https://ghost-wallets.vercel.app)
 
 ### Judge-friendly payment modes
 

@@ -20,7 +20,8 @@ export function generateMagicLinkToken(): string {
  * Create a magic link URL
  */
 export function createMagicLinkUrl(token: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL || "https://ghost-wallets.vercel.app"
   return `${baseUrl}/claim/${token}`
 }
 

@@ -47,7 +47,7 @@ test("anchor withdraw endpoint simulates fiat off-ramp", async () => {
   const magicLink = await createTestMagicLink("25", "USDC")
 
   const response = await anchorWithdraw(
-    makeRequest("http://localhost/api/anchor/withdraw", {
+    makeRequest("https://ghost-wallets.vercel.app/api/anchor/withdraw", {
       token: magicLink.token,
       amount: "25",
       assetCode: "USDC",
@@ -68,7 +68,7 @@ test("claim actions owner-transfer triggers social recovery", async () => {
   const magicLink = await createTestMagicLink("50", "XLM")
 
   const response = await claimAction(
-    makeRequest("http://localhost/api/claim/actions", {
+    makeRequest("https://ghost-wallets.vercel.app/api/claim/actions", {
       token: magicLink.token,
       action: "owner-transfer",
       payload: {
