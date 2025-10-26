@@ -69,7 +69,8 @@ const globalStores = globalThis as typeof globalThis & {
 
 const TRANSACTIONS_FILENAME = "transactions.json"
 
-interface PersistedTransactionRecord extends Omit<TransactionRecord, "events"> {
+interface PersistedTransactionRecord
+  extends Omit<TransactionRecord, "events" | "assetType"> {
   events?: TransactionEvent[]
   assetType?: AssetType
 }
