@@ -1,3 +1,7 @@
+Live Demo
+
+👉 https://ghost-wallets.vercel.app
+
 Ghost Wallets
 
 Send crypto to anyone via email, no wallet required.
@@ -74,9 +78,7 @@ Technical Explanation (Loom): Watch here
 
 Covers contract logic, repo structure, and how Stellar & Soroban power the system.
 
-Live Demo
 
-👉 https://ghost-wallets.vercel.app
 
 🔍 Deployed Smart Contract
 
