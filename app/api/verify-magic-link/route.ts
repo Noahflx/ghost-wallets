@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       tokenSymbol: linkData.currency,
       recipientEmail: linkData.recipient,
       senderName: linkData.senderName ?? null,
+      message: linkData.message ?? null,
       expiresAt: linkData.expiresAt,
       transactionHash: linkData.fundingTxHash ?? null,
       paymentMode: linkData.fundingMode,

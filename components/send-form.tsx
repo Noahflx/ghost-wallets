@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Send } from "lucide-react"
@@ -15,6 +16,7 @@ export function SendForm() {
   const [recipient, setRecipient] = useState("")
   const [amount, setAmount] = useState("")
   const [currency, setCurrency] = useState("USDC")
+  const [message, setMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
@@ -26,7 +28,12 @@ export function SendForm() {
       const response = await fetch("/api/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipient, amount, currency }),
+        body: JSON.stringify({
+          recipient,
+          amount,
+          currency,
+          message: message.trim() ? message : undefined,
+        }),
       })
 
       const data = await response.json()
@@ -43,6 +50,7 @@ export function SendForm() {
       // Reset form
       setRecipient("")
       setAmount("")
+      setMessage("")
     } catch (error) {
       toast({
         title: "Error",
@@ -103,6 +111,17 @@ export function SendForm() {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="message">Message to Recipient (Optional)</Label>
+            <Textarea
+              id="message"
+              placeholder="Add a short note for the recipient"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="min-h-[100px]"
+              maxLength={500}
+            />
+          </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
               <>

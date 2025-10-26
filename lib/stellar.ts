@@ -26,6 +26,7 @@ interface MagicLinkRecord {
   fundingTxHash?: string
   contractAddress?: string
   senderName?: string
+  message?: string
   magicLinkToken: string
   redeemedAt?: Date
   fundingMode: PaymentMode
@@ -481,6 +482,7 @@ interface MagicLinkOptions {
   senderName?: string
   fundingMode?: PaymentMode
   explorerUrl?: string
+  message?: string
 }
 
 export interface GeneratedMagicLink {
@@ -518,6 +520,7 @@ export async function generateMagicLink(
     fundingTxHash,
     contractAddress: options.contractAddress,
     senderName: options.senderName,
+    message: options.message,
     magicLinkToken: token,
     fundingMode,
     explorerUrl: options.explorerUrl,
@@ -542,6 +545,7 @@ export interface MagicLinkVerificationResult {
   fundingTxHash?: string
   contractAddress?: string
   senderName?: string
+  message?: string
   fundingMode: PaymentMode
   explorerUrl?: string
 }
@@ -578,6 +582,7 @@ export async function verifyMagicLink(
     fundingTxHash: record.fundingTxHash,
     contractAddress: record.contractAddress,
     senderName: record.senderName,
+    message: record.message,
     fundingMode: record.fundingMode,
     explorerUrl: record.explorerUrl,
   }

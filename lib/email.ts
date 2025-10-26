@@ -6,6 +6,16 @@ interface EmailOptions {
   expiresAt?: string
   fundingMode: PaymentMode
   explorerUrl?: string
+  message?: string
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
 }
 
 let cachedTransporter: nodemailer.Transporter | null | undefined
@@ -65,6 +75,14 @@ export async function sendMagicLinkEmail(
 
   const fundingMode = options.fundingMode ?? "simulation"
 
+  const messageHtml = options.message
+    ? `<div style="margin: 20px 0; padding: 16px; background-color: #f1f5f9; border-radius: 8px;">
+        <p style="margin: 0; color: #334155; font-size: 15px; line-height: 1.5; white-space: pre-wrap;">
+          ${escapeHtml(options.message)}
+        </p>
+      </div>`
+    : ""
+
   const modeText =
     fundingMode === "testnet"
       ? options.explorerUrl
@@ -92,6 +110,7 @@ export async function sendMagicLinkEmail(
                 : "You've been sent funds via Ghost Wallets."
             }
           </p>
+          ${messageHtml}
           <p style="margin-bottom: 24px; color: #334155; font-size: 15px;">
             Click the secure link below to claim your payment. You'll be taken to Ghost Wallets to complete the process.
           </p>
@@ -111,11 +130,18 @@ export async function sendMagicLinkEmail(
     </div>
   `
 
-  const text = [
+  const textLines = [
     options.senderName
       ? `${options.senderName} sent you ${formattedAmount} ${tokenSymbol} via Ghost Wallets.`
       : `You've received ${formattedAmount} ${tokenSymbol} via Ghost Wallets.`,
     "",
+  ]
+
+  if (options.message) {
+    textLines.push("Message:", options.message, "")
+  }
+
+  textLines.push(
     `Claim your payment: ${magicLinkUrl}`,
     "",
     expiresText,
@@ -123,7 +149,9 @@ export async function sendMagicLinkEmail(
     complianceNote,
     "",
     "If you weren't expecting this email, you can ignore it.",
-  ].join("\n")
+  )
+
+  const text = textLines.join("\n")
 
   await transporter.sendMail({
     from: `${senderDisplayName} <${gmailUser}>`,

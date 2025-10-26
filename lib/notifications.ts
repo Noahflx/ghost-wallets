@@ -8,6 +8,7 @@ interface NotificationOptions {
   expiresAt?: string
   fundingMode: PaymentMode
   explorerUrl?: string
+  message?: string
 }
 
 /**
@@ -29,5 +30,6 @@ export async function sendNotification(
     expiresAt: options.expiresAt,
     fundingMode: options.fundingMode ?? "simulation",
     explorerUrl: options.explorerUrl,
+    message: options.message,
   })
 }

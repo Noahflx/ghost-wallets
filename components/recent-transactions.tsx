@@ -125,6 +125,11 @@ export function RecentTransactions() {
                   <Clock className="h-3 w-3" />
                   {formatTimestamp(tx.createdAt)}
                 </p>
+                {tx.message && (
+                  <p className="mt-2 text-sm text-muted-foreground max-w-xs whitespace-pre-wrap border-l-2 border-border pl-3">
+                    {tx.message}
+                  </p>
+                )}
                 {tx.claimedAt && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Claimed {formatTimestamp(tx.claimedAt)}
