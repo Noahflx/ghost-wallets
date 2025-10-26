@@ -90,6 +90,11 @@ Ghost Wallets now ships with three safe execution paths so you can demo end-to-e
 - **Stellar testnet** – Set `STELLAR_PAYMENT_MODE=testnet` and provide `STELLAR_TREASURY_SECRET_KEY`. Transfers are submitted to Soroban RPC, explorer links are surfaced in the UI/email, and recipients can verify hashes on Stellar Expert—still using play money from Friendbot. Enable `STELLAR_PREFUND_WALLETS=true` to auto-call Friendbot for each generated ghost wallet so the dashboard shows a real transaction hash before the claim step.
 - **Soroban sandbox** – Set `STELLAR_PAYMENT_MODE=sandbox` and run `./scripts/run-sandbox.sh` in a separate terminal. The backend will deploy a fresh contract per recipient with the Soroban CLI, fund wallets through the sandbox Friendbot, and submit payments to `http://localhost:8000/soroban/rpc`.
 
+You can flip between demo mode and real submissions without redeploying by calling the runtime switch API:
+
+- `GET /api/system/payment-mode` returns the active mode, RPC target, Friendbot URL, and whether a treasury key is configured.
+- `POST /api/system/payment-mode` accepts `{ "mode": "simulation" | "testnet" | "sandbox" }` or `{ "demo": true | false }`. When you send `{ "demo": false }` the server verifies `STELLAR_TREASURY_SECRET_KEY` is available before enabling live transfers. Toggling automatically clears cached Friendbot responses and reinitializes the Soroban RPC client so the next transaction executes against the selected network.
+
 When network submission fails (e.g., RPC outage or unsupported asset), the API gracefully falls back to simulation and records the attempt so judges can continue the journey.
 
 ### Local sandbox quickstart

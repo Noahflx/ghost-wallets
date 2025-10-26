@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer"
 import path from "path"
 import type { PaymentMode } from "./types/payments"
+import { getPaymentMode } from "./config/payment-mode"
 
 interface EmailOptions {
   senderName?: string
@@ -74,7 +75,7 @@ export async function sendMagicLinkEmail(
     ? `This link will expire on ${new Date(options.expiresAt).toLocaleString()}.`
     : "This link will expire in 7 days."
 
-  const fundingMode = options.fundingMode ?? "simulation"
+  const fundingMode = options.fundingMode ?? getPaymentMode()
 
   const messageHtml = options.message
     ? `<div style="margin: 20px 0; padding: 16px; background-color: #f1f5f9; border-radius: 8px;">
