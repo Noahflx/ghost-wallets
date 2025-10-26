@@ -12,7 +12,8 @@ Ghost Wallets is a payment system built on Stellar that allows you to send USDC,
 - **Smart Contract Wallets**: Secure Soroban smart contracts for each payment
 - **No Wallet Required**: Recipients can claim funds with just a magic link
 - **Multiple Tokens**: Support for USDC, PYUSD, and XLM
-- **Recovery System**: Email-based wallet recovery mechanism
+- **Recovery System**: Email-based wallet recovery mechanism with guardian approvals
+- **Anchor Ramp Simulation**: Fiat off-ramp stubs wired for MoneyGram/Wyre style anchors
 
 ## Tech Stack
 
@@ -103,6 +104,7 @@ When network submission fails (e.g., RPC outage or unsupported asset), the API g
 - Magic links and transaction metadata are persisted to JSON snapshots in `data/` so a server restart during demo day does not invalidate issued links.
 - Tokens and claim state are hashed before persistence. The on-disk format makes it trivial to swap in Postgres/Supabase after the hackathon—see `lib/storage/filesystem.ts` for the adapter layer.
 - Rate limits protect the `/api/send`, `/api/verify-magic-link`, and `/api/claim-wallet` endpoints from brute force attempts while still permitting smooth judge walkthroughs.
+- Every compliance-sensitive event writes to `data/transactions.json` and `data/claim-actions.json`, including simulated anchor withdrawals, on-chain recovery attempts, and guardian approvals, so the audit trail stays intact even in demo mode.
 
 **Launch checklist** (post-hackathon): move the persistence adapter to Postgres, wire the `claim-wallet` route to the Soroban contract’s `transfer_ownership`, add background jobs to prune expired links, and ship automated compliance reporting.
 
@@ -111,6 +113,7 @@ When network submission fails (e.g., RPC outage or unsupported asset), the API g
 - Email addresses are validated server-side, amounts are clamped via `NEXT_PUBLIC_MAX_SEND_AMOUNT`, and only a curated currency list (USDC, PYUSD, XLM) is accepted.
 - Claim flows rate-limit by IP, require a plausible Stellar address, and surface transaction hashes or explorer links in the dashboard for auditability.
 - Email receipts disclose whether a payment was simulated or executed on testnet and remind recipients about anti-phishing controls.
+- Guardian-based recovery, contract forwarding, and anchor withdrawals all enforce the existing brute-force protections so the new endpoints remain safe for demos.
 
 ### Recipient experience showcase
 
@@ -146,18 +149,28 @@ Refer to `public/samples/magic-link-email.txt` for the plain-text email template
 - `POST /api/send` - Create a new payment and send a magic link email
 - `POST /api/verify-magic-link` - Verify a magic link token
 - `POST /api/claim-wallet` - Claim a wallet and transfer ownership
+- `POST /api/claim/actions` - Capture recipient decisions (keep, withdraw, cash out, owner-transfer, on-chain forward)
+- `POST /api/anchor/withdraw` - Simulate a MoneyGram/Wyre style fiat withdrawal via a Stellar anchor
 
 ## Smart Contract
 
 The Ghost Wallet smart contract provides:
 
 - Wallet initialization with owner and recovery email
-- Token withdrawal functionality
-- Ownership transfer
+- Token withdrawal functionality gated by a multi-asset allow list
+- Ownership transfer, including email-verified social recovery with guardian approvals
 - Balance checking
-- Email-based recovery mechanism
+- Email-based recovery mechanism plus contract-level forwarding to another smart wallet
 
 See [contracts/README.md](contracts/README.md) for more details.
+
+## Testing
+
+Run the lightweight backend integration tests (covering the new anchor stub and social recovery flow) with:
+
+```bash
+npm test
+```
 
 ## Development
 

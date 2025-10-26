@@ -2,7 +2,13 @@ import { randomUUID } from "crypto"
 import { hashToken } from "./magic-link"
 import { readJsonFile, writeJsonFile } from "./storage/filesystem"
 
-export type ClaimActionType = "keep" | "withdraw" | "cashout" | "forward"
+export type ClaimActionType =
+  | "keep"
+  | "withdraw"
+  | "cashout"
+  | "forward"
+  | "owner-transfer"
+  | "anchor-withdraw"
 
 export interface ClaimActionRecord {
   id: string
@@ -10,12 +16,14 @@ export interface ClaimActionRecord {
   action: ClaimActionType
   createdAt: string
   payload: Record<string, unknown>
+  logs: string[]
 }
 
 const CLAIM_ACTIONS_FILENAME = "claim-actions.json"
 
 function loadActionRecords(): ClaimActionRecord[] {
-  return readJsonFile<ClaimActionRecord[]>(CLAIM_ACTIONS_FILENAME, [])
+  const records = readJsonFile<ClaimActionRecord[]>(CLAIM_ACTIONS_FILENAME, [])
+  return records.map((record) => ({ ...record, logs: record.logs ?? [] }))
 }
 
 function persistActionRecords(records: ClaimActionRecord[]): void {
@@ -26,6 +34,7 @@ export interface RecordClaimActionParams {
   token: string
   action: ClaimActionType
   payload?: Record<string, unknown>
+  logs?: string[]
 }
 
 export interface RecordClaimActionResult {
@@ -33,7 +42,7 @@ export interface RecordClaimActionResult {
   tokenHash: string
 }
 
-export function recordClaimAction({ token, action, payload }: RecordClaimActionParams): RecordClaimActionResult {
+export function recordClaimAction({ token, action, payload, logs = [] }: RecordClaimActionParams): RecordClaimActionResult {
   const tokenHash = hashToken(token)
   const records = loadActionRecords()
 
@@ -43,6 +52,7 @@ export function recordClaimAction({ token, action, payload }: RecordClaimActionP
     action,
     createdAt: new Date().toISOString(),
     payload: payload ?? {},
+    logs,
   }
 
   records.push(record)

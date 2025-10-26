@@ -4,12 +4,17 @@ import {
   acknowledgeMagicLink,
   getMagicLinkSnapshot,
   reassignMagicLinkRecipient,
+  requestOwnershipChangeViaEmail,
+  forwardBalanceToSmartWallet,
 } from "@/lib/stellar"
 import { sendNotification } from "@/lib/notifications"
+import { appendTransactionEvent } from "@/lib/transactions"
 
 interface ForwardPayload {
   recipient: string
   message?: string
+  destinationWallet?: string
+  emailClaim?: string
 }
 
 interface WithdrawPayload {
@@ -25,6 +30,18 @@ interface CashOutPayload {
   country: string
   city?: string
   contact?: string
+}
+
+interface OwnerTransferPayload {
+  newOwner: string
+  emailClaim?: string
+}
+
+interface AnchorWithdrawPayload {
+  amount: string
+  assetCode: string
+  destinationBank: string
+  referenceId?: string
 }
 
 function normalizeString(value: unknown): string {
@@ -64,7 +81,14 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case "keep": {
         acknowledgeMagicLink(token)
-        const record = recordClaimAction({ token, action, payload: {} })
+        const logEntry = `Recipient ${snapshot.recipient} acknowledged the claim without withdrawing.`
+        const record = recordClaimAction({ token, action, payload: {}, logs: [logEntry] })
+
+        appendTransactionEvent(record.tokenHash, {
+          type: "keep",
+          timestamp: new Date().toISOString(),
+          data: { recipient: snapshot.recipient },
+        })
 
         return NextResponse.json({
           success: true,
@@ -89,12 +113,30 @@ export async function POST(request: NextRequest) {
           )
         }
 
+        const maskedAccount = maskAccountNumber(withdrawPayload.accountNumber)
+        const logs = [
+          `Simulated bank withdrawal to ${withdrawPayload.bankName} for ${withdrawPayload.fullName}.`,
+          "In production this would call an ACH provider like Wyre or Circle.",
+        ]
+
         const record = recordClaimAction({
           token,
           action,
           payload: {
             ...withdrawPayload,
-            maskedAccount: maskAccountNumber(withdrawPayload.accountNumber),
+            maskedAccount,
+            amount: snapshot.amount,
+            currency: snapshot.currency,
+          },
+          logs,
+        })
+
+        appendTransactionEvent(record.tokenHash, {
+          type: "withdraw-request",
+          timestamp: new Date().toISOString(),
+          data: {
+            bankName: withdrawPayload.bankName,
+            maskedAccount,
             amount: snapshot.amount,
             currency: snapshot.currency,
           },
@@ -106,7 +148,7 @@ export async function POST(request: NextRequest) {
           success: true,
           action,
           recordId: record.id,
-          maskedAccount: maskAccountNumber(withdrawPayload.accountNumber),
+          maskedAccount,
         })
       }
       case "cashout": {
@@ -124,11 +166,27 @@ export async function POST(request: NextRequest) {
           )
         }
 
+        const logs = [
+          `Cash-out simulation recorded for ${cashOutPayload.fullName} in ${cashOutPayload.country}.`,
+          "Partner integration pending for MoneyGram or local anchor payout.",
+        ]
+
         const record = recordClaimAction({
           token,
           action,
           payload: {
             ...cashOutPayload,
+            amount: snapshot.amount,
+            currency: snapshot.currency,
+          },
+          logs,
+        })
+
+        appendTransactionEvent(record.tokenHash, {
+          type: "cashout-request",
+          timestamp: new Date().toISOString(),
+          data: {
+            country: cashOutPayload.country,
             amount: snapshot.amount,
             currency: snapshot.currency,
           },
@@ -138,10 +196,138 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, action, recordId: record.id })
       }
+      case "owner-transfer": {
+        const ownerPayload: OwnerTransferPayload = {
+          newOwner: normalizeString(payload.newOwner),
+          emailClaim: normalizeString(payload.emailClaim),
+        }
+
+        if (!ownerPayload.newOwner) {
+          return NextResponse.json(
+            { error: "A destination Stellar address is required for ownership transfer" },
+            { status: 400 },
+          )
+        }
+
+        const claimProof = ownerPayload.emailClaim || snapshot.recipient
+        const invocation = await requestOwnershipChangeViaEmail(token, ownerPayload.newOwner, claimProof)
+
+        const record = recordClaimAction({
+          token,
+          action,
+          payload: {
+            ...ownerPayload,
+            amount: snapshot.amount,
+            currency: snapshot.currency,
+            contractTxHash: invocation.txHash,
+            simulated: invocation.simulated,
+          },
+          logs: invocation.logs,
+        })
+
+        acknowledgeMagicLink(token)
+
+        return NextResponse.json({
+          success: true,
+          action,
+          recordId: record.id,
+          txHash: invocation.txHash,
+          simulated: invocation.simulated,
+        })
+      }
+      case "anchor-withdraw": {
+        const anchorPayload: AnchorWithdrawPayload = {
+          amount: normalizeString(payload.amount || snapshot.amount),
+          assetCode: normalizeString(payload.assetCode || snapshot.currency),
+          destinationBank: normalizeString(payload.destinationBank),
+          referenceId: normalizeString(payload.referenceId),
+        }
+
+        if (!anchorPayload.destinationBank) {
+          return NextResponse.json(
+            { error: "Destination bank details are required for anchor withdrawal" },
+            { status: 400 },
+          )
+        }
+
+        const timestamp = new Date().toISOString()
+        const logs = [
+          `Anchor withdrawal simulated at ${timestamp}.`,
+          "In production this would POST to a partner like MoneyGram or Wyre with KYC details.",
+        ]
+
+        const record = recordClaimAction({
+          token,
+          action,
+          payload: {
+            ...anchorPayload,
+            amount: anchorPayload.amount,
+            currency: anchorPayload.assetCode,
+          },
+          logs,
+        })
+
+        appendTransactionEvent(record.tokenHash, {
+          type: "anchor-withdraw",
+          timestamp,
+          data: {
+            bank: anchorPayload.destinationBank,
+            amount: anchorPayload.amount,
+            asset: anchorPayload.assetCode,
+            referenceId: anchorPayload.referenceId,
+          },
+        })
+
+        acknowledgeMagicLink(token)
+
+        return NextResponse.json({ success: true, action, recordId: record.id, simulated: true })
+      }
       case "forward": {
         const forwardPayload: ForwardPayload = {
           recipient: normalizeString(payload.recipient),
           message: normalizeString(payload.message),
+          destinationWallet: normalizeString(payload.destinationWallet),
+          emailClaim: normalizeString(payload.emailClaim),
+        }
+
+        if (forwardPayload.destinationWallet) {
+          if (forwardPayload.destinationWallet.length < 10) {
+            return NextResponse.json(
+              { error: "A valid Stellar wallet address is required to forward on-chain" },
+              { status: 400 },
+            )
+          }
+
+          const claimProof = forwardPayload.emailClaim || snapshot.recipient
+          const invocation = await forwardBalanceToSmartWallet(
+            token,
+            forwardPayload.destinationWallet,
+            snapshot.currency,
+            claimProof,
+          )
+
+          const record = recordClaimAction({
+            token,
+            action,
+            payload: {
+              ...forwardPayload,
+              amount: snapshot.amount,
+              currency: snapshot.currency,
+              contractTxHash: invocation.txHash,
+              simulated: invocation.simulated,
+            },
+            logs: invocation.logs,
+          })
+
+          acknowledgeMagicLink(token)
+
+          return NextResponse.json({
+            success: true,
+            action,
+            recordId: record.id,
+            txHash: invocation.txHash,
+            simulated: invocation.simulated,
+          })
         }
 
         if (!forwardPayload.recipient) {

@@ -9,10 +9,54 @@ import {
   hashToken,
   isMagicLinkExpired,
 } from "./magic-link"
-import { markTransactionClaimed } from "./transactions"
+import { appendTransactionEvent, markTransactionClaimed } from "./transactions"
 import { readJsonFile, writeJsonFile } from "./storage/filesystem"
-import type { PaymentMode } from "./types/payments"
-import type { PaymentMetadata } from "./types/payments"
+import type { AssetType, PaymentMetadata, PaymentMode } from "./types/payments"
+
+export interface SupportedAsset {
+  code: string
+  issuer?: string
+  type: AssetType
+  precision: number
+  description: string
+}
+
+const DEFAULT_TESTNET_USDC_ISSUER =
+  process.env.STELLAR_TESTNET_USDC_ISSUER || "GDQOE23YFQ46I4YJ5O7RBWCKK4R76SGWUEF5ZE2GF47Z4BHUQBB4A5F6"
+const DEFAULT_TESTNET_PYUSD_ISSUER =
+  process.env.STELLAR_TESTNET_PYUSD_ISSUER || "GA3H6KREBRR27X6ZI6DPZWSZQBE7UO3MSXEMWX4D4ZGS56ZQ3YE7JRYO"
+
+export const SUPPORTED_ASSETS: Record<string, SupportedAsset> = {
+  XLM: {
+    code: "XLM",
+    type: "native",
+    precision: 7,
+    description: "Stellar Lumens",
+  },
+  USDC: {
+    code: "USDC",
+    issuer: DEFAULT_TESTNET_USDC_ISSUER,
+    type: "credit-alphanum4",
+    precision: 2,
+    description: "Circle USD on Stellar testnet",
+  },
+  PYUSD: {
+    code: "PYUSD",
+    issuer: DEFAULT_TESTNET_PYUSD_ISSUER,
+    type: "credit-alphanum4",
+    precision: 2,
+    description: "PayPal USD test asset",
+  },
+}
+
+export function getSupportedAsset(code: string): SupportedAsset | null {
+  const normalized = code.trim().toUpperCase()
+  return SUPPORTED_ASSETS[normalized] ?? null
+}
+
+export function getSupportedAssetCodes(): string[] {
+  return Object.keys(SUPPORTED_ASSETS)
+}
 
 interface MagicLinkRecord {
   hashedToken: string
@@ -21,6 +65,8 @@ interface MagicLinkRecord {
   recipient: string
   amount: string
   currency: string
+  assetType: AssetType
+  assetIssuer?: string
   expiresAt: Date
   redeemed: boolean
   fundingTxHash?: string
@@ -62,6 +108,7 @@ function hydrateMagicLinkStore(): Map<string, MagicLinkRecord> {
       expiresAt: new Date(record.expiresAt),
       redeemedAt: record.redeemedAt ? new Date(record.redeemedAt) : undefined,
       fundingMode: record.fundingMode ?? "simulation",
+      assetType: record.assetType ?? "native",
       lastAcknowledgedAt: record.lastAcknowledgedAt
         ? new Date(record.lastAcknowledgedAt)
         : undefined,
@@ -131,6 +178,13 @@ async function runSorobanCommand(args: string[]): Promise<string> {
 
 function parseContractId(output: string): string | null {
   const match = output.match(CONTRACT_ID_REGEX)
+  return match ? match[0] : null
+}
+
+const TX_HASH_REGEX = /[0-9a-f]{64}/i
+
+function extractTransactionHash(output: string): string | null {
+  const match = output.match(TX_HASH_REGEX)
   return match ? match[0] : null
 }
 
@@ -398,27 +452,39 @@ function buildExplorerUrl(txHash: string, mode: PaymentMode): string | undefined
   return undefined
 }
 
+interface SimulationOptions {
+  deterministicSeed?: string
+}
+
 function simulatePayment(
   walletAddress: string,
   amount: string,
-  currency: string,
+  asset: SupportedAsset,
+  options: SimulationOptions = {},
 ): PaymentResult {
-  const simulatedHash = createHash("sha256")
+  const hash = createHash("sha256")
     .update(walletAddress)
     .update(":")
     .update(amount)
     .update(":")
-    .update(currency)
-    .update(":")
-    .update(Date.now().toString())
-    .update(randomBytes(16))
-    .digest("hex")
+    .update(asset.code)
+
+  if (options.deterministicSeed) {
+    hash.update(":").update(options.deterministicSeed)
+  } else {
+    hash.update(":").update(Date.now().toString()).update(randomBytes(16))
+  }
+
+  const simulatedHash = hash.digest("hex")
 
   return {
     txHash: simulatedHash,
     mode: "simulation",
     isSimulated: true,
     explorerUrl: undefined,
+    assetCode: asset.code,
+    assetType: asset.type,
+    assetIssuer: asset.issuer,
   }
 }
 
@@ -426,7 +492,7 @@ function simulateClaimTransfer(
   sourceWallet: string,
   destinationWallet: string,
   amount: string,
-  currency: string,
+  asset: SupportedAsset,
 ): string {
   return createHash("sha256")
     .update("claim")
@@ -437,7 +503,7 @@ function simulateClaimTransfer(
     .update(":")
     .update(amount)
     .update(":")
-    .update(currency)
+    .update(asset.code)
     .update(":")
     .update(Date.now().toString())
     .update(randomBytes(16))
@@ -449,6 +515,8 @@ export async function sendPayment(
   amount: string,
   currency: string,
 ): Promise<PaymentResult> {
+  const asset = getSupportedAsset(currency) ?? SUPPORTED_ASSETS.XLM
+
   if (PAYMENT_MODE === "testnet" || PAYMENT_MODE === "sandbox") {
     const treasurySecret = process.env.STELLAR_TREASURY_SECRET_KEY
     const networkLabel = PAYMENT_MODE === "testnet" ? "Stellar testnet" : "Soroban sandbox"
@@ -457,18 +525,21 @@ export async function sendPayment(
       console.warn(
         `STELLAR_PAYMENT_MODE is set to ${PAYMENT_MODE} but STELLAR_TREASURY_SECRET_KEY is not configured. Falling back to simulation.`,
       )
-    } else if (currency !== "XLM") {
+    } else if (asset.type !== "native") {
       console.warn(
-        `${networkLabel} mode currently supports XLM payments only. Received ${currency}. Falling back to simulation.`,
+        `${networkLabel} mode currently supports native XLM payments only. Received ${currency}. Falling back to simulation.`,
       )
     } else {
       try {
-        const txHash = await sendToGhostWallet(treasurySecret, walletAddress, amount, currency)
+        const txHash = await sendToGhostWallet(treasurySecret, walletAddress, amount, asset.code)
         return {
           txHash,
           mode: PAYMENT_MODE,
           isSimulated: false,
           explorerUrl: buildExplorerUrl(txHash, PAYMENT_MODE),
+          assetCode: asset.code,
+          assetType: asset.type,
+          assetIssuer: asset.issuer,
         }
       } catch (error) {
         console.error(`Failed to submit payment on the ${networkLabel}. Falling back to simulation.`, error)
@@ -479,7 +550,10 @@ export async function sendPayment(
   // Simulate a short processing delay so the flow appears realistic
   await new Promise((resolve) => setTimeout(resolve, 500))
 
-  return simulatePayment(walletAddress, amount, currency)
+  const deterministicSeed = `${walletAddress}:${amount}:${asset.code}`
+  return simulatePayment(walletAddress, amount, asset, {
+    deterministicSeed: asset.type === "native" ? undefined : deterministicSeed,
+  })
 }
 
 /**
@@ -491,6 +565,8 @@ interface MagicLinkOptions {
   fundingMode?: PaymentMode
   explorerUrl?: string
   message?: string
+  assetType?: AssetType
+  assetIssuer?: string
 }
 
 export interface GeneratedMagicLink {
@@ -515,6 +591,8 @@ export interface MagicLinkSnapshot {
   walletAddress: string
   amount: string
   currency: string
+  assetType: AssetType
+  assetIssuer?: string
   recipient: string
   expiresAt: string
   fundingTxHash?: string
@@ -539,6 +617,8 @@ export function getMagicLinkSnapshot(token: string): MagicLinkSnapshot | null {
     walletAddress: record.walletAddress,
     amount: record.amount,
     currency: record.currency,
+    assetType: record.assetType,
+    assetIssuer: record.assetIssuer,
     recipient: record.recipient,
     expiresAt: record.expiresAt.toISOString(),
     fundingTxHash: record.fundingTxHash,
@@ -570,6 +650,9 @@ export async function generateMagicLink(
   const fundingMode = options.fundingMode ?? PAYMENT_MODE
   const walletAddress = wallet.address
   const walletSecret = wallet.secretKey
+  const asset = getSupportedAsset(currency) ?? SUPPORTED_ASSETS.XLM
+  const assetType = options.assetType ?? asset.type
+  const assetIssuer = options.assetIssuer ?? asset.issuer
 
   magicLinkStore.set(hashedToken, {
     hashedToken,
@@ -578,6 +661,8 @@ export async function generateMagicLink(
     recipient,
     amount,
     currency,
+    assetType,
+    assetIssuer,
     expiresAt,
     redeemed: false,
     fundingTxHash,
@@ -603,6 +688,8 @@ export interface MagicLinkVerificationResult {
   walletAddress: string
   amount: string
   currency: string
+  assetType: AssetType
+  assetIssuer?: string
   recipient: string
   expiresAt: string
   fundingTxHash?: string
@@ -640,6 +727,8 @@ export async function verifyMagicLink(
     walletAddress: record.walletAddress,
     amount: record.amount,
     currency: record.currency,
+    assetType: record.assetType,
+    assetIssuer: record.assetIssuer,
     recipient: record.recipient,
     expiresAt: record.expiresAt.toISOString(),
     fundingTxHash: record.fundingTxHash,
@@ -663,6 +752,8 @@ export interface ReassignMagicLinkResult {
   expiresAt: string
   amount: string
   currency: string
+  assetType: AssetType
+  assetIssuer?: string
   recipient: string
   fundingMode: PaymentMode
   explorerUrl?: string
@@ -725,6 +816,8 @@ export function reassignMagicLinkRecipient(
     expiresAt: newExpiration.toISOString(),
     amount: updatedRecord.amount,
     currency: updatedRecord.currency,
+    assetType: updatedRecord.assetType,
+    assetIssuer: updatedRecord.assetIssuer,
     recipient: updatedRecord.recipient,
     fundingMode: updatedRecord.fundingMode,
     explorerUrl: updatedRecord.explorerUrl,
@@ -741,6 +834,14 @@ export function acknowledgeMagicLink(token: string): void {
   record.lastAcknowledgedAt = new Date()
   magicLinkStore.set(record.hashedToken, record)
   persistMagicLinkStore()
+
+  appendTransactionEvent(record.hashedToken, {
+    type: "acknowledged",
+    timestamp: new Date().toISOString(),
+    data: {
+      recipient: record.recipient,
+    },
+  })
 }
 
 /**
@@ -751,6 +852,8 @@ export interface ClaimFundsResult {
   walletAddress: string
   amount: string
   currency: string
+  assetType: AssetType
+  assetIssuer?: string
   recipient: string
   contractAddress?: string
   fundingMode: PaymentMode
@@ -787,14 +890,20 @@ export async function claimFunds(token: string, destinationAddress?: string): Pr
     }
 
     try {
-      claimTxHash = await sendToGhostWallet(record.walletSecret, claimDestination, record.amount, record.currency)
+      claimTxHash = await sendToGhostWallet(
+        record.walletSecret,
+        claimDestination,
+        record.amount,
+        record.currency,
+      )
       explorerUrl = buildExplorerUrl(claimTxHash, record.fundingMode)
     } catch (error) {
       console.error("Failed to transfer funds from ghost wallet:", error)
       throw new Error("Failed to transfer funds to the provided Stellar address")
     }
   } else {
-    claimTxHash = simulateClaimTransfer(record.walletAddress, claimDestination, record.amount, record.currency)
+    const asset = getSupportedAsset(record.currency) ?? SUPPORTED_ASSETS.XLM
+    claimTxHash = simulateClaimTransfer(record.walletAddress, claimDestination, record.amount, asset)
   }
 
   record.redeemed = true
@@ -803,6 +912,19 @@ export async function claimFunds(token: string, destinationAddress?: string): Pr
   magicLinkStore.set(hashedToken, record)
   persistMagicLinkStore()
 
+  appendTransactionEvent(hashedToken, {
+    type: "claim-transfer",
+    timestamp: new Date().toISOString(),
+    data: {
+      destination: claimDestination,
+      txHash: claimTxHash,
+      assetCode: record.currency,
+      assetType: record.assetType,
+      assetIssuer: record.assetIssuer,
+      mode: record.fundingMode,
+    },
+  })
+
   markTransactionClaimed(hashedToken, claimTxHash, claimDestination)
 
   return {
@@ -810,10 +932,185 @@ export async function claimFunds(token: string, destinationAddress?: string): Pr
     walletAddress: record.walletAddress,
     amount: record.amount,
     currency: record.currency,
+    assetType: record.assetType,
+    assetIssuer: record.assetIssuer,
     recipient: record.recipient,
     contractAddress: record.contractAddress,
     fundingMode: record.fundingMode,
     explorerUrl,
     claimedBy: claimDestination,
   }
+}
+
+export interface ContractInvocationResult {
+  txHash: string
+  simulated: boolean
+  mode: PaymentMode
+  logs: string[]
+  contractAddress?: string
+}
+
+function simulateContractInvocation(
+  contractAddress: string | undefined,
+  fn: string,
+  context: Record<string, string>,
+): ContractInvocationResult {
+  const hash = createHash("sha256")
+    .update(contractAddress ?? "SIM")
+    .update(":")
+    .update(fn)
+
+  for (const [key, value] of Object.entries(context)) {
+    hash.update(":").update(key).update("=").update(value)
+  }
+
+  return {
+    txHash: hash.digest("hex"),
+    simulated: true,
+    mode: PAYMENT_MODE,
+    logs: [
+      `Simulated ${fn} with context ${JSON.stringify(context)}`,
+      "No on-chain transaction submitted (demo mode)",
+    ],
+    contractAddress,
+  }
+}
+
+async function invokeGhostWalletContract(
+  contractAddress: string,
+  fn: string,
+  args: string[],
+  context: Record<string, string>,
+): Promise<ContractInvocationResult> {
+  if (PAYMENT_MODE !== "sandbox") {
+    return simulateContractInvocation(contractAddress, fn, context)
+  }
+
+  try {
+    const output = await runSorobanCommand([
+      "contract",
+      "invoke",
+      "--id",
+      contractAddress,
+      "--rpc-url",
+      RPC_URL,
+      "--network-passphrase",
+      NETWORK_PASSPHRASE,
+      "--source",
+      SANDBOX_IDENTITY,
+      "--fn",
+      fn,
+      "--",
+      ...args,
+    ])
+
+    const txHash = extractTransactionHash(output) ?? simulateContractInvocation(contractAddress, fn, context).txHash
+
+    return {
+      txHash,
+      simulated: false,
+      mode: PAYMENT_MODE,
+      logs: [output.trim()],
+      contractAddress,
+    }
+  } catch (error) {
+    console.error(`Failed to invoke ${fn} on ghost wallet ${contractAddress}. Using simulation fallback.`, error)
+    return simulateContractInvocation(contractAddress, fn, context)
+  }
+}
+
+function getMagicLinkRecordOrThrow(token: string): MagicLinkRecord {
+  const record = getMagicLinkRecord(token)
+
+  if (!record) {
+    throw new Error("Invalid or unknown claim token")
+  }
+
+  return record
+}
+
+export async function requestOwnershipChangeViaEmail(
+  token: string,
+  newOwner: string,
+  emailClaim: string,
+): Promise<ContractInvocationResult> {
+  const record = getMagicLinkRecordOrThrow(token)
+  const context = {
+    token: hashToken(token),
+    newOwner,
+    emailClaim,
+  }
+
+  const contractAddress = record.contractAddress
+
+  const result = contractAddress
+    ? await invokeGhostWalletContract(contractAddress, "social_recover", [
+        "--new_owner",
+        newOwner,
+        "--email_claim",
+        emailClaim,
+      ], context)
+    : simulateContractInvocation(contractAddress, "social_recover", context)
+
+  appendTransactionEvent(record.hashedToken, {
+    type: "owner-change-request",
+    timestamp: new Date().toISOString(),
+    data: {
+      newOwner,
+      emailClaimed: Boolean(emailClaim),
+      simulated: result.simulated,
+      txHash: result.txHash,
+      contractAddress: contractAddress ?? null,
+    },
+  })
+
+  return result
+}
+
+export async function forwardBalanceToSmartWallet(
+  token: string,
+  destinationWallet: string,
+  assetCode: string,
+  emailClaim: string,
+): Promise<ContractInvocationResult> {
+  const record = getMagicLinkRecordOrThrow(token)
+  const context = {
+    token: hashToken(token),
+    destinationWallet,
+    assetCode,
+    emailClaim,
+  }
+
+  const contractAddress = record.contractAddress
+
+  // TODO: surface the correct token contract address once deployments are automated.
+  const args = contractAddress
+    ? [
+        "--token_address",
+        contractAddress,
+        "--asset_code",
+        assetCode,
+        "--destination_wallet",
+        destinationWallet,
+        "--email_claim",
+        emailClaim,
+      ]
+    : []
+
+  const result = contractAddress
+    ? await invokeGhostWalletContract(contractAddress, "forward_balance", args, context)
+    : simulateContractInvocation(contractAddress, "forward_balance", context)
+
+  appendTransactionEvent(record.hashedToken, {
+    type: "forward-balance",
+    timestamp: new Date().toISOString(),
+    data: {
+      destinationWallet,
+      assetCode,
+      simulated: result.simulated,
+      txHash: result.txHash,
+    },
+  })
+
+  return result
 }

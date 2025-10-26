@@ -1,10 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createWallet, sendPayment, generateMagicLink } from "@/lib/stellar"
+import {
+  createWallet,
+  sendPayment,
+  generateMagicLink,
+  getSupportedAsset,
+  type SupportedAsset,
+} from "@/lib/stellar"
 import { sendNotification } from "@/lib/notifications"
 import { recordTransaction } from "@/lib/transactions"
 import { enforceRateLimit } from "@/lib/rate-limit"
 
-const SUPPORTED_CURRENCIES = new Set(["USDC", "PYUSD", "XLM"])
 const MAX_SEND_AMOUNT = Number(process.env.NEXT_PUBLIC_MAX_SEND_AMOUNT ?? 10000)
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000
 const RATE_LIMIT_MAX_REQUESTS = 5
@@ -18,14 +23,14 @@ function extractClientIdentifier(request: NextRequest): string {
   return header.split(",")[0]?.trim() || request.ip || "anonymous"
 }
 
-function normalizeAmount(raw: string, currency: string): string {
+function normalizeAmount(raw: string, asset: SupportedAsset): string {
   const parsed = Number(raw)
 
   if (!Number.isFinite(parsed)) {
     throw new Error("Amount must be numeric")
   }
 
-  const decimals = currency === "XLM" ? 7 : 2
+  const decimals = asset.precision
   return parsed.toFixed(decimals).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1")
 }
 
@@ -68,13 +73,15 @@ export async function POST(request: NextRequest) {
 
     const normalizedCurrency = typeof currency === "string" ? currency.trim().toUpperCase() : ""
 
-    if (!SUPPORTED_CURRENCIES.has(normalizedCurrency)) {
+    const asset = getSupportedAsset(normalizedCurrency)
+
+    if (!asset) {
       return NextResponse.json({ error: "Unsupported currency" }, { status: 400 })
     }
 
     let normalizedAmount: string
     try {
-      normalizedAmount = normalizeAmount(amount, normalizedCurrency)
+      normalizedAmount = normalizeAmount(amount, asset)
     } catch (error) {
       return NextResponse.json(
         { error: error instanceof Error ? error.message : "Amount is invalid" },
@@ -120,6 +127,8 @@ export async function POST(request: NextRequest) {
         message: sanitizedMessage,
         fundingMode: paymentResult.mode,
         explorerUrl: paymentResult.explorerUrl,
+        assetType: paymentResult.assetType,
+        assetIssuer: paymentResult.assetIssuer,
       },
     )
     console.log("[v0] Generated magic link:", magicLink.url)
@@ -128,6 +137,8 @@ export async function POST(request: NextRequest) {
       recipient: sanitizedRecipient,
       amount: normalizedAmount,
       currency: normalizedCurrency,
+      assetType: paymentResult.assetType,
+      assetIssuer: paymentResult.assetIssuer,
       walletAddress: wallet.address,
       transactionHash: paymentResult.txHash,
       magicLinkUrl: magicLink.url,
