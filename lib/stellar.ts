@@ -1,12 +1,12 @@
 import {
-  Keypair,
-  TransactionBuilder,
-  Operation,
   Asset,
   BASE_FEE,
+  Keypair,
   Networks,
+  Operation,
+  SorobanRpc,
+  TransactionBuilder,
 } from "@stellar/stellar-sdk"
-import { SorobanRpc } from "@stellar/stellar-sdk"
 import { createHash, randomBytes } from "crypto"
 import { execFile } from "child_process"
 import { promisify } from "util"
@@ -237,7 +237,7 @@ function resetSorobanServerCache() {
   cachedServer = undefined
 }
 
-function getSorobanServer(): SorobanRpc.Server | null {
+async function getSorobanServer(): Promise<SorobanRpc.Server | null> {
   const { mode, rpcUrl } = getNetworkContext()
 
   if (mode === "simulation") {
@@ -251,21 +251,15 @@ function getSorobanServer(): SorobanRpc.Server | null {
   cachedServer = null
 
   try {
-    const allowHttp = rpcUrl.startsWith("http://")
-    const server = new SorobanRpc.Server(rpcUrl, allowHttp ? { allowHttp: true } : undefined)
+    cachedServer = new SorobanRpc.Server(rpcUrl, {
+      allowHttp: rpcUrl.startsWith("http://"),
+    })
 
-    void server
-      .getHealth()
-      .then(() => {
-        console.log("Soroban RPC client initialized successfully")
-      })
-      .catch((error) => {
-        console.warn("Soroban RPC health check failed", error)
-      })
-
-    cachedServer = server
+    await cachedServer.getHealth()
+    console.log("[v0] Soroban RPC client initialized successfully:", rpcUrl)
   } catch (error) {
-    console.warn("Failed to initialize Soroban RPC client. Using mock behaviour instead.", error)
+    console.warn("Unable to connect to Soroban RPC", error)
+    console.warn("Falling back to simulated payment behaviour.")
     cachedServer = null
   }
 
@@ -448,7 +442,7 @@ export async function sendToGhostWallet(
   amount: string,
   asset: SupportedAsset,
 ): Promise<string> {
-  const server = getSorobanServer()
+  const server = await getSorobanServer()
   const { networkPassphrase } = getNetworkContext()
 
   if (!server) {
@@ -832,7 +826,7 @@ export async function sendPayment(
         `Payment mode is set to ${mode} but STELLAR_TREASURY_SECRET_KEY is not configured. Falling back to simulation.`,
       )
     } else {
-      const server = getSorobanServer()
+      const server = await getSorobanServer()
 
       if (!server) {
         console.warn(`Unable to reach Soroban RPC server. Falling back to simulation for ${asset.code}.`)
