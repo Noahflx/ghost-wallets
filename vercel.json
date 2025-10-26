@@ -1,4 +1,4 @@
 {
-    "buildCommand": "pnpm install --no-frozen-lockfile && pnpm rebuild sharp esbuild @stellar/stellar-sdk"
-  }
+"buildCommand": "pnpm rebuild sharp esbuild @stellar/stellar-sdk && pnpm build"
+}
   
