@@ -225,7 +225,7 @@ function HeroCard() {
           <ul className="divide-y divide-border/30 text-sm">
             {[
               { who: "dude@stellar.org", what: "Sent", amt: "-$120.00", tag: "USDC" },
-              { who: "phil@easya.io", what: "Received", amt: "+$6,666.00", tag: "USDC" },
+              { who: "prize@easya.io", what: "Received", amt: "+$6,666.00", tag: "USDC" },
               { who: "jonah@gmail.com", what: "Sent", amt: "-$38.90", tag: "PYUSD" },
             ].map((t, i) => (
               <motion.li
@@ -258,16 +258,14 @@ function LogosRow() {
   const logos = [
     { src: "/stellar.png", alt: "Stellar" },
     { src: "/soroban.png", alt: "Soroban" },
-    { src: "/next.png", alt: "Next.js" },
-    { src: "/framer.svg", alt: "Framer Motion" },
   ]
 
   return (
     <section aria-label="Built with" className="py-10 md:py-14">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground/80">Built with Stellar + Soroban</div>
-        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-6 opacity-80">
-          {logos.map((logo) => (
+        <div className="text-xs uppercase tracking-wider text-muted-foreground/80">Built with</div>
+        <div className="mt-5 grid grid-cols-2 gap-6 justify-center opacity-80">
+        {logos.map((logo) => (
             <div key={logo.alt} className="flex items-center justify-center rounded-lg border border-border/30 bg-card/60 p-4">
               <Image src={logo.src} alt={logo.alt} width={90} height={40} className="object-contain opacity-90 hover:opacity-100 transition-opacity" />
             </div>

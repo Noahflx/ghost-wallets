@@ -110,7 +110,6 @@ export async function sendMagicLinkEmail(
             <p style="margin:8px 0 0;">© ${new Date().getFullYear()} Ghost Wallets. All rights reserved.</p>
             <p style="margin:4px 0;">
               <a href="https://ghostwallets.app" style="color:#a78fe0;text-decoration:none;">ghostwallets</a> ·
-              <a href="https://twitter.com/ghostwallets" style="color:#a78fe0;text-decoration:none;">founder</a>
             </p>
           </div>
         </div>
