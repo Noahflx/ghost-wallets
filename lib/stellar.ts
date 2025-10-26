@@ -4,6 +4,7 @@ import {
   Keypair,
   Networks,
   Operation,
+  StrKey,
   TransactionBuilder,
   rpc,
 } from "@stellar/stellar-sdk"
@@ -31,10 +32,41 @@ export interface SupportedAsset {
   description: string
 }
 
-const DEFAULT_TESTNET_USDC_ISSUER =
-  process.env.STELLAR_TESTNET_USDC_ISSUER || "GDUKMGUGDZQK6YH2V8YX1Z6KFLSDGQ7Y3TQF6A4O5QZVDGQFQ6VFS75Q"
-const DEFAULT_TESTNET_PYUSD_ISSUER =
-  process.env.STELLAR_TESTNET_PYUSD_ISSUER || "GDGU5OAPHNPU5UCLE5W7VJGSPB3C5GZ3H5CTM4D4DKRZ7L2ECYQKJJOB"
+const FALLBACK_TESTNET_USDC_ISSUER = "GDUKMGUGDZQK6YH2V8YX1Z6KFLSDGQ7Y3TQF6A4O5QZVDGQFQ6VFS75Q"
+const FALLBACK_TESTNET_PYUSD_ISSUER = "GDGU5OAPHNPU5UCLE5W7VJGSPB3C5GZ3H5CTM4D4DKRZ7L2ECYQKJJOB"
+
+function resolveIssuer(
+  envValue: string | undefined,
+  fallback: string,
+  assetCode: string,
+): string {
+  const normalizedFallback = fallback.trim()
+  const candidate = envValue?.trim()
+
+  if (!candidate) {
+    return normalizedFallback
+  }
+
+  if (!StrKey.isValidEd25519PublicKey(candidate)) {
+    console.warn(
+      `[v0] Provided issuer for ${assetCode} is invalid. Falling back to default issuer.`,
+    )
+    return normalizedFallback
+  }
+
+  return candidate
+}
+
+const DEFAULT_TESTNET_USDC_ISSUER = resolveIssuer(
+  process.env.STELLAR_TESTNET_USDC_ISSUER,
+  FALLBACK_TESTNET_USDC_ISSUER,
+  "USDC",
+)
+const DEFAULT_TESTNET_PYUSD_ISSUER = resolveIssuer(
+  process.env.STELLAR_TESTNET_PYUSD_ISSUER,
+  FALLBACK_TESTNET_PYUSD_ISSUER,
+  "PYUSD",
+)
 
 export const SUPPORTED_ASSETS: Record<string, SupportedAsset> = {
   XLM: {
