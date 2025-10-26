@@ -2,15 +2,21 @@ Live Demo
 
 👉 https://ghost-wallets.vercel.app
 
+
+
 Ghost Wallets
 
 Send crypto to anyone via email, no wallet required.
 The simplest way to move money across borders using Stellar and Soroban.
 
+
+
 Summary:
 
 Email-based crypto payments built on Stellar.
 Send USDC, PYUSD, or XLM via magic links—no wallet setup needed.
+
+
 
 Full Description
 
@@ -27,6 +33,8 @@ Cross-border access. Freelancers and small businesses can receive international 
 
 The project uses Stellar’s testnet and Soroban smart contracts to demonstrate real asset transfer, recovery flows, and fiat-style withdrawal simulation through anchor stubs.
 
+
+
 Technical Description
 
 Smart Contracts: Built in Rust using Soroban SDK.
@@ -37,12 +45,18 @@ Blockchain Layer: Runs on the Stellar Network, using the Soroban RPC for on-chai
 In testnet and sandbox modes, payments appear in Stellar Expert with real hashes.
 A simulation mode mimics full flows locally for judge demos without funding keys.
 
+
+
 Frontend: Next.js 16 + React 19 + Tailwind CSS + shadcn/ui
 The dashboard shows transaction history, status badges (“Simulated,” “Testnet”), and explorer links.
+
+
 
 Email Layer: Nodemailer + Gmail SMTP
 Sends magic links and claim confirmations.
 Tokens are hashed and persisted in /data/magic-links.json for reliability.
+
+
 
 APIs Used:
 
@@ -65,9 +79,15 @@ Anchors (simulated) to show fiat ramps
 Testnet USDC issuer integration for realistic flows
 
 
-Screenshots
 
-	
+
+Screenshots
+<img width="1470" height="956" alt="Screenshot 2025-10-26 at 10 21 39 AM" src="https://github.com/user-attachments/assets/ecd9b25b-0e9a-446e-a8f5-cab1815a7ae2" />
+
+<img width="1470" height="956" alt="Screenshot 2025-10-26 at 10 21 57 AM" src="https://github.com/user-attachments/assets/8982a29f-e0be-4061-bc3e-81075a166f3e" />
+
+
+
 	
 🎥 Demo Video
 
@@ -83,8 +103,8 @@ Covers contract logic, repo structure, and how Stellar & Soroban power the syste
 🔍 Deployed Smart Contract
 
 Network: Stellar Testnet
-Contract ID: CAIMMNPRA6VGSBC5Z2SST2Q4QZHBY23LJPLKTGXS77I77AQVB7JS3255
-Explorer: View on Stellar Expert
+Contract ID: CBREGY42MWMEQJCAOHSPKTOJEIUVPTAZIJ7HAN5JHYVZSZEGI7GI7TVE
+Explorer: https://stellar.expert/explorer/testnet/contract/CBREGY42MWMEQJCAOHSPKTOJEIUVPTAZIJ7HAN5JHYVZSZEGI7GI7TVE
 
 Repository Structure
 contracts/ghost-wallet/     → Soroban smart contract (Rust)
