@@ -32,15 +32,22 @@ export interface SupportedAsset {
   description: string
 }
 
-const FALLBACK_TESTNET_USDC_ISSUER = "GDUKMGUGDZQK6YH2V8YX1Z6KFLSDGQ7Y3TQF6A4O5QZVDGQFQ6VFS75Q"
-const FALLBACK_TESTNET_PYUSD_ISSUER = "GDGU5OAPHNPU5UCLE5W7VJGSPB3C5GZ3H5CTM4D4DKRZ7L2ECYQKJJOB"
+const FALLBACK_TESTNET_USDC_ISSUER = "GA3SYCMGQ2KTIGKDO7ANZMOJHGPPN4JEOKHNSWTY4NLTFZJXNWLSKIYY"
+const FALLBACK_TESTNET_PYUSD_ISSUER = "GAAO4Y7M3YZQ6UQNOBAUGJSC7EDWUAJ4ZONN2NT6SCV4R5D3H6N4WIAQ"
 
 function resolveIssuer(
   envValue: string | undefined,
   fallback: string,
   assetCode: string,
+  envVariableName: string,
 ): string {
   const normalizedFallback = fallback.trim()
+
+  if (!StrKey.isValidEd25519PublicKey(normalizedFallback)) {
+    throw new Error(
+      `Fallback issuer for ${assetCode} is invalid. Set ${envVariableName} to a valid Ed25519 public key.`,
+    )
+  }
   const candidate = envValue?.trim()
 
   if (!candidate) {
@@ -61,11 +68,13 @@ const DEFAULT_TESTNET_USDC_ISSUER = resolveIssuer(
   process.env.STELLAR_TESTNET_USDC_ISSUER,
   FALLBACK_TESTNET_USDC_ISSUER,
   "USDC",
+  "STELLAR_TESTNET_USDC_ISSUER",
 )
 const DEFAULT_TESTNET_PYUSD_ISSUER = resolveIssuer(
   process.env.STELLAR_TESTNET_PYUSD_ISSUER,
   FALLBACK_TESTNET_PYUSD_ISSUER,
   "PYUSD",
+  "STELLAR_TESTNET_PYUSD_ISSUER",
 )
 
 export const SUPPORTED_ASSETS: Record<string, SupportedAsset> = {
