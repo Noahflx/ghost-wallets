@@ -106,6 +106,7 @@ export function SendForm() {
                 <SelectContent>
                   <SelectItem value="USDC">USDC</SelectItem>
                   <SelectItem value="PYUSD">PYUSD</SelectItem>
+                  <SelectItem value="XLM">XLM</SelectItem>
                 </SelectContent>
               </Select>
             </div>

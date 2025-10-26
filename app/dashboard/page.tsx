@@ -298,6 +298,7 @@ function WalletSummary({ displayBalance }: { displayBalance: string }) {
             {[
               { code: "USDC", name: "USD Coin", status: "Enabled" },
               { code: "PYUSD", name: "PayPal USD", status: "Enabled" },
+              { code: "XLM", name: "Lumen", status: "Enabled" },
             ].map((a) => (
               <li
                 key={a.code}
