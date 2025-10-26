@@ -1,13 +1,12 @@
 import {
   Keypair,
-  SorobanRpc,
   TransactionBuilder,
   Operation,
   Asset,
   BASE_FEE,
   Networks,
-  Server as SorobanServer,
 } from "@stellar/stellar-sdk"
+import { SorobanRpc } from "stellar-sdk"
 import { createHash, randomBytes } from "crypto"
 import { execFile } from "child_process"
 import { promisify } from "util"
@@ -252,8 +251,8 @@ function getSorobanServer(): SorobanRpc.Server | null {
   cachedServer = null
 
   try {
-    cachedServer = new SorobanServer(rpcUrl) as unknown as SorobanRpc.Server
-    console.log("[v0] Soroban RPC client initialized at", rpcUrl)
+    cachedServer = new SorobanRpc.Server(rpcUrl)
+    console.log("[v0] Soroban RPC client initialized successfully:", rpcUrl)
   } catch (error) {
     console.warn("Failed to initialize Soroban RPC client. Using mock behaviour instead.", error)
     cachedServer = null
