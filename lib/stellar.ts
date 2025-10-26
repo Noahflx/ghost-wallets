@@ -4,9 +4,10 @@ import {
   Keypair,
   Networks,
   Operation,
-  SorobanRpc,
   TransactionBuilder,
+  rpc,
 } from "@stellar/stellar-sdk"
+import type { Account } from "@stellar/stellar-sdk"
 import { createHash, randomBytes } from "crypto"
 import { execFile } from "child_process"
 import { promisify } from "util"
@@ -208,7 +209,7 @@ export function getStellarRuntimeDetails(): StellarRuntimeDetails {
   }
 }
 
-let cachedServer: SorobanRpc.Server | null | undefined
+let cachedServer: rpc.Server | null | undefined
 
 const CONTRACT_ID_REGEX = /C[0-9A-Z]{55}/
 
@@ -237,7 +238,7 @@ function resetSorobanServerCache() {
   cachedServer = undefined
 }
 
-async function getSorobanServer(): Promise<SorobanRpc.Server | null> {
+async function getSorobanServer(): Promise<rpc.Server | null> {
   const { mode, rpcUrl } = getNetworkContext()
 
   if (mode === "simulation") {
@@ -251,7 +252,7 @@ async function getSorobanServer(): Promise<SorobanRpc.Server | null> {
   cachedServer = null
 
   try {
-    cachedServer = new SorobanRpc.Server(rpcUrl, {
+    cachedServer = new rpc.Server(rpcUrl, {
       allowHttp: rpcUrl.startsWith("http://"),
     })
 
@@ -563,8 +564,8 @@ function computeConversionSendAmount(amount: string): string {
   return sendValue.toFixed(7)
 }
 
-function extractBalance(account: SorobanRpc.AccountResponse, asset: SupportedAsset): string | null {
-  const balances = (account as SorobanRpc.AccountResponse & { balances?: BalanceSummary[] }).balances
+function extractBalance(account: Account, asset: SupportedAsset): string | null {
+  const balances = (account as Account & { balances?: BalanceSummary[] }).balances
 
   if (!balances) {
     return null
@@ -577,7 +578,7 @@ function extractBalance(account: SorobanRpc.AccountResponse, asset: SupportedAss
 async function ensureTrustline(
   secretKey: string,
   asset: SupportedAsset,
-  server: SorobanRpc.Server,
+  server: rpc.Server,
   networkPassphrase: string,
   contextLabel: string,
 ): Promise<void> {
@@ -661,7 +662,7 @@ async function attemptXlmConversion(
   secretKey: string,
   asset: SupportedAsset,
   amount: string,
-  server: SorobanRpc.Server,
+  server: rpc.Server,
   networkPassphrase: string,
 ): Promise<boolean> {
   if (asset.type === "native") {
@@ -712,7 +713,7 @@ async function ensureTreasuryAssetBalance(
   secretKey: string,
   asset: SupportedAsset,
   amount: string,
-  server: SorobanRpc.Server,
+  server: rpc.Server,
   networkPassphrase: string,
 ): Promise<void> {
   const treasuryKeypair = Keypair.fromSecret(secretKey)
