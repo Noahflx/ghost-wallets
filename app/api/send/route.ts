@@ -37,7 +37,7 @@ function validateEmail(email: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const { recipient, amount, currency, senderName } = await request.json()
+    const { recipient, amount, currency, senderName, message } = await request.json()
 
     const identifier = `send:${extractClientIdentifier(request)}`
     const rateLimit = enforceRateLimit(identifier, {
@@ -96,6 +96,8 @@ export async function POST(request: NextRequest) {
     }
 
     const sanitizedSenderName = typeof senderName === "string" ? senderName.trim().slice(0, 120) : undefined
+    const trimmedMessage = typeof message === "string" ? message.trim() : undefined
+    const sanitizedMessage = trimmedMessage && trimmedMessage.length > 0 ? trimmedMessage.slice(0, 500) : undefined
 
     // Create a new smart wallet for the recipient
     const wallet = await createWallet(sanitizedRecipient)
@@ -115,6 +117,7 @@ export async function POST(request: NextRequest) {
       {
         contractAddress: wallet.contractAddress,
         senderName: sanitizedSenderName,
+        message: sanitizedMessage,
         fundingMode: paymentResult.mode,
         explorerUrl: paymentResult.explorerUrl,
       },
@@ -130,6 +133,7 @@ export async function POST(request: NextRequest) {
       magicLinkUrl: magicLink.url,
       magicLinkTokenHash: magicLink.hashedToken,
       senderName: sanitizedSenderName,
+      message: sanitizedMessage,
       fundingMode: paymentResult.mode,
       explorerUrl: paymentResult.explorerUrl,
       isSimulated: paymentResult.isSimulated,
@@ -141,6 +145,7 @@ export async function POST(request: NextRequest) {
     // Send notification email
     await sendNotification(sanitizedRecipient, magicLink.url, normalizedAmount, normalizedCurrency, {
       senderName: sanitizedSenderName,
+      message: sanitizedMessage,
       expiresAt: magicLink.expiresAt,
       fundingMode: paymentResult.mode,
       explorerUrl: paymentResult.explorerUrl,

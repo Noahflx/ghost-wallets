@@ -16,6 +16,7 @@ export interface TransactionRecord {
   magicLinkUrl: string
   magicLinkTokenHash: string
   senderName?: string
+  message?: string
   createdAt: string
   updatedAt: string
   claimedAt?: string
@@ -38,6 +39,7 @@ interface RecordTransactionInput {
   magicLinkUrl: string
   magicLinkTokenHash: string
   senderName?: string
+  message?: string
   fundingMode: PaymentMode
   explorerUrl?: string
   isSimulated: boolean
@@ -106,6 +108,7 @@ export function recordTransaction(input: RecordTransactionInput): TransactionRec
     magicLinkUrl: input.magicLinkUrl,
     magicLinkTokenHash: input.magicLinkTokenHash,
     senderName: input.senderName,
+    message: input.message,
     createdAt: timestamp,
     updatedAt: timestamp,
     fundingMode: input.fundingMode,

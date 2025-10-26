@@ -22,6 +22,7 @@ interface WalletData {
   tokenSymbol: string
   recipientEmail?: string | null
   senderName?: string | null
+  message?: string | null
   expiresAt?: string | null
 }
 
@@ -61,6 +62,7 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
         tokenSymbol: data.tokenSymbol,
         recipientEmail: data.recipientEmail,
         senderName: data.senderName,
+        message: data.message,
         expiresAt: data.expiresAt,
       })
       setFlowState("verify")
@@ -223,6 +225,11 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
               )}
               {walletData.senderName && (
                 <p className="text-sm text-muted-foreground mt-1">From: {walletData.senderName}</p>
+              )}
+              {walletData.message && (
+                <blockquote className="mt-3 border-l-4 border-primary/40 bg-background/60 p-3 text-sm text-muted-foreground italic whitespace-pre-wrap">
+                  {walletData.message}
+                </blockquote>
               )}
               {walletData.expiresAt && (
                 <p className="text-xs text-muted-foreground mt-1">

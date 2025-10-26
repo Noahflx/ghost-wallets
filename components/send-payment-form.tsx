@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -32,6 +33,7 @@ export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
   const [amount, setAmount] = useState("")
   const [tokenSymbol, setTokenSymbol] = useState("USDC")
   const [senderName, setSenderName] = useState("")
+  const [message, setMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [magicLinkUrl, setMagicLinkUrl] = useState("")
@@ -53,6 +55,7 @@ export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
           amount,
           currency: tokenSymbol,
           senderName: senderName || undefined,
+          message: message.trim() ? message : undefined,
         }),
       })
 
@@ -83,6 +86,7 @@ export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
       setRecipientEmail("")
       setAmount("")
       setSenderName("")
+      setMessage("")
     } catch (error) {
       toast({
         title: "Error",
@@ -228,6 +232,20 @@ export function SendPaymentForm({ onSend }: SendPaymentFormProps) {
               value={senderName}
               onChange={(e) => setSenderName(e.target.value)}
             />
+          </div>
+
+          {/* Optional Message */}
+          <div className="space-y-2">
+            <Label htmlFor="message">Message to Recipient (Optional)</Label>
+            <Textarea
+              id="message"
+              placeholder="Thanks for helping out with the event!"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="min-h-[100px]"
+              maxLength={500}
+            />
+            <p className="text-xs text-muted-foreground">This note appears in the recipient's email.</p>
           </div>
 
           {/* Info Alert */}
