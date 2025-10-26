@@ -32,6 +32,7 @@ interface MagicLinkRecord {
   fundingMode: PaymentMode
   explorerUrl?: string
   claimedBy?: string
+  lastAcknowledgedAt?: Date
 }
 
 const execFileAsync = promisify(execFile)
@@ -48,6 +49,7 @@ interface PersistedMagicLinkRecord
   extends Omit<MagicLinkRecord, "expiresAt" | "redeemedAt"> {
   expiresAt: string
   redeemedAt?: string
+  lastAcknowledgedAt?: string
 }
 
 function hydrateMagicLinkStore(): Map<string, MagicLinkRecord> {
@@ -60,6 +62,9 @@ function hydrateMagicLinkStore(): Map<string, MagicLinkRecord> {
       expiresAt: new Date(record.expiresAt),
       redeemedAt: record.redeemedAt ? new Date(record.redeemedAt) : undefined,
       fundingMode: record.fundingMode ?? "simulation",
+      lastAcknowledgedAt: record.lastAcknowledgedAt
+        ? new Date(record.lastAcknowledgedAt)
+        : undefined,
     })
   }
 
@@ -85,6 +90,9 @@ function persistMagicLinkStore() {
       ...record,
       expiresAt: record.expiresAt.toISOString(),
       redeemedAt: record.redeemedAt ? record.redeemedAt.toISOString() : undefined,
+      lastAcknowledgedAt: record.lastAcknowledgedAt
+        ? record.lastAcknowledgedAt.toISOString()
+        : undefined,
     }
   }
 
@@ -492,6 +500,61 @@ export interface GeneratedMagicLink {
   expiresAt: string
 }
 
+function getMagicLinkRecord(token: string): MagicLinkRecord | null {
+  const hashedToken = hashToken(token)
+  const record = magicLinkStore.get(hashedToken)
+
+  if (!record) {
+    return null
+  }
+
+  return record
+}
+
+export interface MagicLinkSnapshot {
+  walletAddress: string
+  amount: string
+  currency: string
+  recipient: string
+  expiresAt: string
+  fundingTxHash?: string
+  contractAddress?: string
+  senderName?: string
+  message?: string
+  fundingMode: PaymentMode
+  explorerUrl?: string
+  redeemed: boolean
+  claimedBy?: string
+  lastAcknowledgedAt?: string
+}
+
+export function getMagicLinkSnapshot(token: string): MagicLinkSnapshot | null {
+  const record = getMagicLinkRecord(token)
+
+  if (!record) {
+    return null
+  }
+
+  return {
+    walletAddress: record.walletAddress,
+    amount: record.amount,
+    currency: record.currency,
+    recipient: record.recipient,
+    expiresAt: record.expiresAt.toISOString(),
+    fundingTxHash: record.fundingTxHash,
+    contractAddress: record.contractAddress,
+    senderName: record.senderName,
+    message: record.message,
+    fundingMode: record.fundingMode,
+    explorerUrl: record.explorerUrl,
+    redeemed: record.redeemed,
+    claimedBy: record.claimedBy,
+    lastAcknowledgedAt: record.lastAcknowledgedAt
+      ? record.lastAcknowledgedAt.toISOString()
+      : undefined,
+  }
+}
+
 export async function generateMagicLink(
   recipient: string,
   wallet: Pick<CreatedWallet, "address" | "secretKey">,
@@ -586,6 +649,98 @@ export async function verifyMagicLink(
     fundingMode: record.fundingMode,
     explorerUrl: record.explorerUrl,
   }
+}
+
+interface ReassignMagicLinkOptions {
+  message?: string
+  extendExpirationMs?: number
+}
+
+export interface ReassignMagicLinkResult {
+  token: string
+  hashedToken: string
+  url: string
+  expiresAt: string
+  amount: string
+  currency: string
+  recipient: string
+  fundingMode: PaymentMode
+  explorerUrl?: string
+}
+
+export function reassignMagicLinkRecipient(
+  token: string,
+  newRecipient: string,
+  options: ReassignMagicLinkOptions = {},
+): ReassignMagicLinkResult {
+  const record = getMagicLinkRecord(token)
+
+  if (!record) {
+    throw new Error("Invalid or unknown claim token")
+  }
+
+  if (record.redeemed) {
+    throw new Error("This link has already been redeemed")
+  }
+
+  if (isMagicLinkExpired(record.expiresAt)) {
+    throw new Error("This link has expired and cannot be reassigned")
+  }
+
+  const trimmedRecipient = newRecipient.trim()
+
+  if (!trimmedRecipient) {
+    throw new Error("A recipient is required to forward this balance")
+  }
+
+  const previousHashedToken = record.hashedToken
+  const newToken = generateMagicLinkToken()
+  const newHashedToken = hashToken(newToken)
+  const expirationExtension = options.extendExpirationMs ?? 0
+  const newExpiration = new Date(
+    Math.max(Date.now(), record.expiresAt.getTime()) + expirationExtension,
+  )
+
+  const updatedRecord: MagicLinkRecord = {
+    ...record,
+    hashedToken: newHashedToken,
+    magicLinkToken: newToken,
+    recipient: trimmedRecipient,
+    message: options.message ?? record.message,
+    expiresAt: newExpiration,
+    lastAcknowledgedAt: undefined,
+    claimedBy: undefined,
+    redeemed: false,
+    redeemedAt: undefined,
+  }
+
+  magicLinkStore.delete(previousHashedToken)
+  magicLinkStore.set(newHashedToken, updatedRecord)
+  persistMagicLinkStore()
+
+  return {
+    token: newToken,
+    hashedToken: newHashedToken,
+    url: createMagicLinkUrl(newToken),
+    expiresAt: newExpiration.toISOString(),
+    amount: updatedRecord.amount,
+    currency: updatedRecord.currency,
+    recipient: updatedRecord.recipient,
+    fundingMode: updatedRecord.fundingMode,
+    explorerUrl: updatedRecord.explorerUrl,
+  }
+}
+
+export function acknowledgeMagicLink(token: string): void {
+  const record = getMagicLinkRecord(token)
+
+  if (!record) {
+    throw new Error("Unknown claim token")
+  }
+
+  record.lastAcknowledgedAt = new Date()
+  magicLinkStore.set(record.hashedToken, record)
+  persistMagicLinkStore()
 }
 
 /**
