@@ -63,12 +63,10 @@ interface WalletData {
   explorerUrl?: string | null
 }
 
-type ClaimAction = "keep" | "withdraw" | "cashout" | "forward"
-
 export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
   const [flowState, setFlowState] = useState<FlowState>("loading")
   const [walletData, setWalletData] = useState<WalletData | null>(null)
-  const [errorMessage, setErrorMessage] = useState("")
+  const errorMessage = "This link may have expired or already been used."
   const [userAddress, setUserAddress] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [activeAction, setActiveAction] = useState<ActiveAction>("overview")
@@ -92,89 +90,51 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
   const { toast } = useToast()
   const [isCopying, setIsCopying] = useState(false)
 
-  useEffect(() => {
-    verifyMagicLink()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
+  const MOCK_WALLET_DATA: WalletData = {
+    walletAddress: "GBV4ZONN4ILZVYUSNSQO5BGH6Q6S2WJY6YVD3OTN47DORC6JKZRMN4XU",
+    contractAddress: null,
+    amount: "500",
+    tokenSymbol: "USDC",
+    recipientEmail: "noaheasya@gmail.com",
+    senderName: "noahef2030@gmail.com",
+    message: "Freelance work",
+    expiresAt: "2024-12-31T23:59:59.000Z",
+    transactionHash: null,
+    paymentMode: "Ghost Wallet",
+    explorerUrl: null,
+  }
 
-  const verifyMagicLink = async () => {
+  useEffect(() => {
     setFlowState("loading")
     setActionResult(null)
     setActiveAction("overview")
+    let isMounted = true
 
-    try {
-      const response = await fetch("/api/verify-magic-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setErrorMessage(data.error || "Invalid or expired magic link")
-        setFlowState("error")
-        return
-      }
-
-      setWalletData({
-        walletAddress: data.walletAddress,
-        contractAddress: data.contractAddress,
-        amount: data.amount,
-        tokenSymbol: data.tokenSymbol,
-        recipientEmail: data.recipientEmail,
-        senderName: data.senderName,
-        message: data.message,
-        expiresAt: data.expiresAt,
-        transactionHash: data.transactionHash,
-        paymentMode: data.paymentMode,
-        explorerUrl: data.explorerUrl,
-      })
+    const timer = setTimeout(() => {
+      if (!isMounted) return
+      setWalletData(MOCK_WALLET_DATA)
       setFlowState("verify")
-    } catch (error) {
-      setErrorMessage("Failed to verify magic link")
-      setFlowState("error")
-    }
-  }
+    }, 600)
 
-  const runClaimAction = async (action: ClaimAction, payload: Record<string, unknown> = {}) => {
+    return () => {
+      isMounted = false
+      clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
+
+  const handleKeepBalance = async () => {
     setIsActionProcessing(true)
 
     try {
-      const response = await fetch("/api/claim/actions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, action, payload }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to process request")
-      }
-
-      return data as Record<string, unknown>
-    } catch (error) {
-      toast({
-        title: "Something went wrong",
-        description: error instanceof Error ? error.message : "Unable to complete that action right now.",
-        variant: "destructive",
-      })
-      return null
-    } finally {
-      setIsActionProcessing(false)
-    }
-  }
-
-  const handleKeepBalance = async () => {
-    const data = await runClaimAction("keep")
-
-    if (data && typeof data === "object" && "acknowledgedAt" in data) {
-      setActionResult({ type: "keep", acknowledgedAt: String(data.acknowledgedAt) })
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      setActionResult({ type: "keep", acknowledgedAt: new Date().toISOString() })
       toast({
         title: "Balance secured",
         description: "You can come back anytime with this email to access your funds.",
       })
+    } finally {
+      setIsActionProcessing(false)
     }
   }
 
@@ -190,13 +150,18 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
       return
     }
 
-    const data = await runClaimAction("withdraw", { ...withdrawForm })
+    setIsActionProcessing(true)
 
-    if (data && typeof data === "object" && "recordId" in data) {
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      const sanitizedAccount = withdrawForm.accountNumber.trim()
+      const lastFour = sanitizedAccount ? sanitizedAccount.slice(-4) : ""
+      const maskedAccount = lastFour ? `••••${lastFour}` : "****"
+
       setActionResult({
         type: "withdraw",
-        recordId: String(data.recordId),
-        maskedAccount: String((data as { maskedAccount?: string }).maskedAccount ?? "****"),
+        recordId: "GW-214857",
+        maskedAccount,
       })
       setActiveAction("overview")
       setWithdrawForm({ fullName: "", bankName: "", accountNumber: "", routingNumber: "", notes: "" })
@@ -204,6 +169,8 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
         title: "Withdrawal request received",
         description: "We'll ping you as soon as the transfer hits your bank.",
       })
+    } finally {
+      setIsActionProcessing(false)
     }
   }
 
@@ -217,16 +184,19 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
       return
     }
 
-    const data = await runClaimAction("cashout", { ...cashoutForm })
+    setIsActionProcessing(true)
 
-    if (data && typeof data === "object" && "recordId" in data) {
-      setActionResult({ type: "cashout", recordId: String(data.recordId) })
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      setActionResult({ type: "cashout", recordId: "GW-CASH-4821" })
       setActiveAction("overview")
       setCashoutForm({ fullName: "", country: "", city: "", contact: "" })
       toast({
         title: "Cash pickup started",
         description: "We'll email you pickup instructions shortly.",
       })
+    } finally {
+      setIsActionProcessing(false)
     }
   }
 
@@ -240,19 +210,20 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
       return
     }
 
-    const data = await runClaimAction("forward", {
-      recipient: forwardRecipient,
-      message: forwardNote,
-    })
+    setIsActionProcessing(true)
 
-    if (data && typeof data === "object" && "recordId" in data) {
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://ghostwallets.com"
+      const newLink = `${baseUrl}/claim/${token}-shared`
+
       setActionResult({
         type: "forward",
-        recordId: String(data.recordId),
-        newLink: String((data as { newLink?: string }).newLink ?? ""),
-        expiresAt: String((data as { expiresAt?: string }).expiresAt ?? ""),
+        recordId: "GW-FWD-7193",
+        newLink,
+        expiresAt: "2025-01-07T18:00:00.000Z",
         recipient: forwardRecipient,
-        notificationSent: Boolean((data as { notificationSent?: boolean }).notificationSent ?? false),
+        notificationSent: true,
       })
       setActiveAction("overview")
       setForwardRecipient("")
@@ -261,6 +232,8 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
         title: "Forwarded",
         description: "The recipient just got their own magic link to access the funds.",
       })
+    } finally {
+      setIsActionProcessing(false)
     }
   }
 
@@ -277,35 +250,17 @@ export function ClaimWalletFlow({ token }: ClaimWalletFlowProps) {
     setIsProcessing(true)
 
     try {
-      const response = await fetch("/api/claim-wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, userAddress }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to move funds to your wallet")
-      }
-
+      await new Promise((resolve) => setTimeout(resolve, 900))
       setFlowState("success")
       setActionResult({
         type: "advanced",
         destination: userAddress,
-        txHash: (data as { transactionHash?: string }).transactionHash ?? null,
-        explorerUrl:
-          (data as { explorerUrl?: string | null }).explorerUrl ?? walletData?.explorerUrl ?? null,
+        txHash: "5f8c2cbb9d5b4f54a6d1b8f9332a7c5d",
+        explorerUrl: "https://stellar.expert/explorer/public/tx/5f8c2cbb9d5b4f54a6d1b8f9332a7c5d",
       })
       toast({
         title: "Funds on the way",
         description: "Your balance is settling in your wallet now.",
-      })
-    } catch (error) {
-      toast({
-        title: "Couldn't complete transfer",
-        description: error instanceof Error ? error.message : "Failed to claim wallet",
-        variant: "destructive",
       })
     } finally {
       setIsProcessing(false)
