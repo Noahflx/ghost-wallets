@@ -32,7 +32,7 @@ export interface SupportedAsset {
   description: string
 }
 
-const FALLBACK_TESTNET_USDC_ISSUER = "GA3SYCMGQ2KTIGKDO7ANZMOJHGPPN4JEOKHNSWTY4NLTFZJXNWLSKIYY"
+const FALLBACK_TESTNET_USDC_ISSUER = "GCBYRCYEDXHKYZIB5PSLBAG3H7U7AE3K3EUKMLWOZOHJAMMZONKBBVND"
 const FALLBACK_TESTNET_PYUSD_ISSUER = "GAAO4Y7M3YZQ6UQNOBAUGJSC7EDWUAJ4ZONN2NT6SCV4R5D3H6N4WIAQ"
 
 function resolveIssuer(
@@ -631,7 +631,17 @@ async function ensureTrustline(
   }
 
   const keypair = Keypair.fromSecret(secretKey)
-  const account = await server.getAccount(keypair.publicKey())
+  let account: Account
+
+  try {
+    account = await server.getAccount(keypair.publicKey())
+  } catch (error) {
+    console.error(
+      `[v0] Failed to load ${contextLabel} account while ensuring ${asset.code} trustline.`,
+      error,
+    )
+    throw error
+  }
 
   const existingBalance = extractBalance(account, asset)
 
@@ -653,10 +663,109 @@ async function ensureTrustline(
 
   transaction.sign(keypair)
 
-  const response = await server.sendTransaction(transaction)
+  try {
+    const response = await server.sendTransaction(transaction)
 
-  if (!response.hash) {
-    throw new Error(`Unable to establish ${asset.code} trustline for ${contextLabel}`)
+    if (!response.hash) {
+      throw new Error(`Unable to establish ${asset.code} trustline for ${contextLabel}`)
+    }
+  } catch (error) {
+    console.error(
+      `[v0] Failed to establish ${asset.code} trustline for ${contextLabel}.`,
+      error,
+    )
+    throw error
+  }
+}
+
+const TREASURY_USDC_MIN_BALANCE = "10"
+
+async function ensureTreasuryUsdcTrustline(
+  secretKey: string,
+  asset: SupportedAsset,
+  server: rpc.Server,
+  networkPassphrase: string,
+): Promise<void> {
+  if (asset.type === "native" || asset.code !== "USDC") {
+    return
+  }
+
+  console.log(`[v0] Initializing Stellar client for treasury USDC trustline verification.`)
+
+  const keypair = Keypair.fromSecret(secretKey)
+  let account: Account
+
+  try {
+    account = await server.getAccount(keypair.publicKey())
+  } catch (error) {
+    console.error(`[v0] Unable to load treasury account for USDC trustline check.`, error)
+    throw error
+  }
+
+  console.log(`[v0] Checking treasury USDC trustline state.`)
+
+  let existingBalance = extractBalance(account, asset)
+
+  if (existingBalance === null) {
+    console.log(`[v0] Creating treasury trustline for USDC asset.`)
+
+    const transaction = new TransactionBuilder(account, {
+      fee: BASE_FEE,
+      networkPassphrase,
+    })
+      .addOperation(
+        Operation.changeTrust({
+          asset: toStellarAsset(asset),
+        }),
+      )
+      .setTimeout(60)
+      .build()
+
+    transaction.sign(keypair)
+
+    try {
+      const response = await server.sendTransaction(transaction)
+
+      if (!response.hash) {
+        throw new Error(`Unable to establish ${asset.code} trustline for treasury`)
+      }
+
+      console.log(`[v0] Treasury USDC trustline established: ${response.hash}`)
+    } catch (error) {
+      console.error(`[v0] Failed to submit treasury USDC trustline transaction.`, error)
+      throw error
+    }
+
+    try {
+      account = await server.getAccount(keypair.publicKey())
+      existingBalance = extractBalance(account, asset)
+    } catch (error) {
+      console.warn(`[v0] Unable to refresh treasury account after trustline creation.`, error)
+    }
+  } else {
+    console.log(`[v0] Treasury USDC trustline already active.`)
+  }
+
+  console.log(`[v0] Confirming treasury USDC balance.`)
+
+  try {
+    await ensureTreasuryAssetBalance(
+      secretKey,
+      asset,
+      TREASURY_USDC_MIN_BALANCE,
+      server,
+      networkPassphrase,
+    )
+
+    const refreshedAccount = await server.getAccount(keypair.publicKey())
+    const confirmedBalance = extractBalance(refreshedAccount, asset)
+
+    if (confirmedBalance) {
+      console.log(`[v0] Treasury USDC balance: ${confirmedBalance}`)
+    }
+  } catch (error) {
+    console.error(`[v0] Unable to confirm treasury USDC balance.`, error)
+    throw error
   }
 }
 
@@ -877,6 +986,10 @@ export async function sendPayment(
         console.warn(`Unable to reach Soroban RPC server. Falling back to simulation for ${asset.code}.`)
       } else {
         try {
+          if (mode === "testnet" && asset.code === "USDC") {
+            await ensureTreasuryUsdcTrustline(treasurySecret, asset, server, networkPassphrase)
+          }
+
           await ensureTrustline(treasurySecret, asset, server, networkPassphrase, "treasury")
 
           if (asset.type !== "native") {
