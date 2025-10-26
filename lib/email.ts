@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer"
+import path from "path"
 import type { PaymentMode } from "./types/payments"
 
 interface EmailOptions {
@@ -159,5 +160,12 @@ export async function sendMagicLinkEmail(
     subject,
     text,
     html,
+    attachments: [
+      {
+        filename: "logo.png",
+        path: path.join(process.cwd(), "public", "logo.png"),
+        cid: "logo",
+      },
+    ],
   })
 }
