@@ -142,7 +142,10 @@ const DEFAULT_SANDBOX_RPC_URL = "http://localhost:8000/soroban/rpc"
 const DEFAULT_SANDBOX_FRIENDBOT_URL = "http://localhost:8000/friendbot"
 
 interface PersistedMagicLinkRecord
-  extends Omit<MagicLinkRecord, "expiresAt" | "redeemedAt"> {
+  extends Omit<
+    MagicLinkRecord,
+    "expiresAt" | "redeemedAt" | "lastAcknowledgedAt"
+  > {
   expiresAt: string
   redeemedAt?: string
   lastAcknowledgedAt?: string
@@ -1247,6 +1250,7 @@ export async function claimFunds(token: string, destinationAddress?: string): Pr
 
   let claimTxHash: string
   let explorerUrl = record.explorerUrl
+  const asset = getSupportedAsset(record.currency) ?? SUPPORTED_ASSETS.XLM
 
   if (record.fundingMode === "testnet" || record.fundingMode === "sandbox") {
     if (!record.walletSecret) {
@@ -1258,7 +1262,7 @@ export async function claimFunds(token: string, destinationAddress?: string): Pr
         record.walletSecret,
         claimDestination,
         record.amount,
-        record.currency,
+        asset,
       )
       explorerUrl = buildExplorerUrl(claimTxHash, record.fundingMode)
     } catch (error) {
@@ -1266,7 +1270,6 @@ export async function claimFunds(token: string, destinationAddress?: string): Pr
       throw new Error("Failed to transfer funds to the provided Stellar address")
     }
   } else {
-    const asset = getSupportedAsset(record.currency) ?? SUPPORTED_ASSETS.XLM
     claimTxHash = simulateClaimTransfer(record.walletAddress, claimDestination, record.amount, asset)
   }
 
