@@ -251,8 +251,19 @@ function getSorobanServer(): SorobanRpc.Server | null {
   cachedServer = null
 
   try {
-    cachedServer = new SorobanRpc.Server(rpcUrl)
-    console.log("[v0] Soroban RPC client initialized successfully:", rpcUrl)
+    const allowHttp = rpcUrl.startsWith("http://")
+    const server = new SorobanRpc.Server(rpcUrl, allowHttp ? { allowHttp: true } : undefined)
+
+    void server
+      .getHealth()
+      .then(() => {
+        console.log("Soroban RPC client initialized successfully")
+      })
+      .catch((error) => {
+        console.warn("Soroban RPC health check failed", error)
+      })
+
+    cachedServer = server
   } catch (error) {
     console.warn("Failed to initialize Soroban RPC client. Using mock behaviour instead.", error)
     cachedServer = null
