@@ -3,6 +3,12 @@ Live Demo
 👉 https://ghost-wallets.vercel.app
 
 
+Canva Pitch Deck:
+https://www.canva.com/design/DAG22iyvGOQ/cSX7Vw5lphX2chanRIPPGw/edit?utm_content=DAG22iyvGOQ&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+
+
+Loom: 
+
 
 Ghost Wallets
 
@@ -129,6 +135,8 @@ Withdraw: Contract enforces allowlist and sends tokens to a verified address or 
 
 Contract source: contracts/ghost-wallet/src/lib.rs
 
+
+
 How to Run Locally
 git clone https://github.com/Noahflx/ghost-wallets
 cd ghost-wallets
@@ -136,13 +144,16 @@ npm install
 npm run dev
 
 
+
+
 To run in sandbox mode:
 
 export STELLAR_PAYMENT_MODE=sandbox
 ./scripts/run-sandbox.sh
 
-Canva Pitch Deck:
-https://www.canva.com/design/DAG22iyvGOQ/cSX7Vw5lphX2chanRIPPGw/edit?utm_content=DAG22iyvGOQ&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+AI Tools Used:
+
+Claude, V0.dev, chatgpt, chatgpt codex.
 
 License
 
