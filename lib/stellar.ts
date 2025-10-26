@@ -23,9 +23,9 @@ export interface SupportedAsset {
 }
 
 const DEFAULT_TESTNET_USDC_ISSUER =
-  process.env.STELLAR_TESTNET_USDC_ISSUER || "GDQOE23YFQ46I4YJ5O7RBWCKK4R76SGWUEF5ZE2GF47Z4BHUQBB4A5F6"
+  process.env.STELLAR_TESTNET_USDC_ISSUER || "GDUKMGUGDZQK6YH2V8YX1Z6KFLSDGQ7Y3TQF6A4O5QZVDGQFQ6VFS75Q"
 const DEFAULT_TESTNET_PYUSD_ISSUER =
-  process.env.STELLAR_TESTNET_PYUSD_ISSUER || "GA3H6KREBRR27X6ZI6DPZWSZQBE7UO3MSXEMWX4D4ZGS56ZQ3YE7JRYO"
+  process.env.STELLAR_TESTNET_PYUSD_ISSUER || "GDGU5OAPHNPU5UCLE5W7VJGSPB3C5GZ3H5CTM4D4DKRZ7L2ECYQKJJOB"
 
 export const SUPPORTED_ASSETS: Record<string, SupportedAsset> = {
   XLM: {
@@ -429,7 +429,7 @@ export async function sendToGhostWallet(
   fromSecretKey: string,
   toWalletAddress: string,
   amount: string,
-  tokenAddress: string,
+  asset: SupportedAsset,
 ): Promise<string> {
   const server = getSorobanServer()
   const { networkPassphrase } = getNetworkContext()
@@ -450,7 +450,7 @@ export async function sendToGhostWallet(
       .addOperation(
         Operation.payment({
           destination: toWalletAddress,
-          asset: Asset.native(), // TODO: Support custom tokens
+          asset: toStellarAsset(asset),
           amount: amount,
         }),
       )
@@ -508,6 +508,239 @@ function buildExplorerUrl(txHash: string, mode: PaymentMode): string | undefined
 
 interface SimulationOptions {
   deterministicSeed?: string
+}
+
+interface BalanceSummary {
+  asset_type: string
+  asset_code?: string
+  asset_issuer?: string
+  balance: string
+}
+
+function toStellarAsset(asset: SupportedAsset): Asset {
+  if (asset.type === "native") {
+    return Asset.native()
+  }
+
+  if (!asset.issuer) {
+    throw new Error(`Asset ${asset.code} is missing an issuer`)
+  }
+
+  return new Asset(asset.code, asset.issuer)
+}
+
+function matchesAsset(balance: BalanceSummary, asset: SupportedAsset): boolean {
+  if (asset.type === "native") {
+    return balance.asset_type === "native"
+  }
+
+  return (
+    balance.asset_type !== "native" &&
+    balance.asset_code === asset.code &&
+    balance.asset_issuer === asset.issuer
+  )
+}
+
+function computeConversionSendAmount(amount: string): string {
+  const numeric = Number(amount)
+
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return amount
+  }
+
+  const sendValue = Math.max(numeric * 2, numeric + 1)
+  return sendValue.toFixed(7)
+}
+
+function extractBalance(account: SorobanRpc.AccountResponse, asset: SupportedAsset): string | null {
+  const balances = (account as SorobanRpc.AccountResponse & { balances?: BalanceSummary[] }).balances
+
+  if (!balances) {
+    return null
+  }
+
+  const match = balances.find((balance) => matchesAsset(balance, asset))
+  return match?.balance ?? null
+}
+
+async function ensureTrustline(
+  secretKey: string,
+  asset: SupportedAsset,
+  server: SorobanRpc.Server,
+  networkPassphrase: string,
+  contextLabel: string,
+): Promise<void> {
+  if (asset.type === "native") {
+    return
+  }
+
+  const keypair = Keypair.fromSecret(secretKey)
+  const account = await server.getAccount(keypair.publicKey())
+
+  const existingBalance = extractBalance(account, asset)
+
+  if (existingBalance !== null) {
+    return
+  }
+
+  const transaction = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase,
+  })
+    .addOperation(
+      Operation.changeTrust({
+        asset: toStellarAsset(asset),
+      }),
+    )
+    .setTimeout(60)
+    .build()
+
+  transaction.sign(keypair)
+
+  const response = await server.sendTransaction(transaction)
+
+  if (!response.hash) {
+    throw new Error(`Unable to establish ${asset.code} trustline for ${contextLabel}`)
+  }
+}
+
+async function requestFriendbotFunding(
+  publicKey: string,
+  asset: SupportedAsset,
+  amount: string,
+): Promise<boolean> {
+  const { friendbotUrlBase } = getNetworkContext()
+
+  try {
+    const url = new URL(friendbotUrlBase)
+    url.searchParams.set("addr", publicKey)
+
+    if (asset.type !== "native" && asset.issuer) {
+      url.searchParams.set("asset", `${asset.code}:${asset.issuer}`)
+      url.searchParams.set("amount", amount)
+    }
+
+    const response = await fetch(url.toString())
+
+    if (!response.ok) {
+      console.warn(
+        `[v0] Friendbot funding for ${asset.code} failed with status ${response.status}.`,
+      )
+      return false
+    }
+
+    const payload = (await response.json()) as FriendbotSuccessResponse | { hash?: string; result?: string }
+
+    const hash = (payload as FriendbotSuccessResponse).hash ?? (payload as { hash?: string }).hash
+
+    if (typeof hash === "string" && hash.length > 0) {
+      console.log(`[v0] Friendbot provided ${asset.code} funding: ${hash}`)
+      return true
+    }
+
+    console.warn(`[v0] Friendbot response missing transaction hash for ${asset.code}.`, payload)
+  } catch (error) {
+    console.warn(`[v0] Friendbot funding attempt threw for ${asset.code}.`, error)
+  }
+
+  return false
+}
+
+async function attemptXlmConversion(
+  secretKey: string,
+  asset: SupportedAsset,
+  amount: string,
+  server: SorobanRpc.Server,
+  networkPassphrase: string,
+): Promise<boolean> {
+  if (asset.type === "native") {
+    return true
+  }
+
+  try {
+    const keypair = Keypair.fromSecret(secretKey)
+    const account = await server.getAccount(keypair.publicKey())
+
+    const sendAmount = computeConversionSendAmount(amount)
+
+    const transaction = new TransactionBuilder(account, {
+      fee: BASE_FEE,
+      networkPassphrase,
+    })
+      .addOperation(
+        Operation.pathPaymentStrictSend({
+          sendAsset: Asset.native(),
+          sendAmount,
+          destination: keypair.publicKey(),
+          destAsset: toStellarAsset(asset),
+          destMin: amount,
+          path: [],
+        }),
+      )
+      .setTimeout(60)
+      .build()
+
+    transaction.sign(keypair)
+
+    const response = await server.sendTransaction(transaction)
+
+    if (!response.hash) {
+      console.warn(`[v0] XLM conversion for ${asset.code} did not yield a transaction hash.`)
+      return false
+    }
+
+    console.log(`[v0] Executed XLM conversion for ${asset.code}: ${response.hash}`)
+    return true
+  } catch (error) {
+    console.warn(`[v0] XLM conversion attempt failed for ${asset.code}.`, error)
+    return false
+  }
+}
+
+async function ensureTreasuryAssetBalance(
+  secretKey: string,
+  asset: SupportedAsset,
+  amount: string,
+  server: SorobanRpc.Server,
+  networkPassphrase: string,
+): Promise<void> {
+  const treasuryKeypair = Keypair.fromSecret(secretKey)
+  const account = await server.getAccount(treasuryKeypair.publicKey())
+  const currentBalance = extractBalance(account, asset)
+
+  if (asset.type === "native") {
+    return
+  }
+
+  const numericBalance = currentBalance ? Number(currentBalance) : 0
+
+  if (numericBalance >= Number(amount)) {
+    return
+  }
+
+  const fundedViaFriendbot = await requestFriendbotFunding(treasuryKeypair.publicKey(), asset, amount)
+
+  if (fundedViaFriendbot) {
+    const refreshed = await server.getAccount(treasuryKeypair.publicKey())
+    const refreshedBalance = extractBalance(refreshed, asset)
+
+    if (refreshedBalance && Number(refreshedBalance) >= Number(amount)) {
+      return
+    }
+  }
+
+  const converted = await attemptXlmConversion(secretKey, asset, amount, server, networkPassphrase)
+
+  if (!converted) {
+    throw new Error(`Treasury does not have sufficient ${asset.code} balance and could not be funded automatically.`)
+  }
+
+  const postConversion = await server.getAccount(treasuryKeypair.publicKey())
+  const postBalance = extractBalance(postConversion, asset)
+
+  if (!postBalance || Number(postBalance) < Number(amount)) {
+    throw new Error(`Treasury ${asset.code} balance remains insufficient after conversion attempts.`)
+  }
 }
 
 function simulatePayment(
@@ -568,9 +801,10 @@ export async function sendPayment(
   walletAddress: string,
   amount: string,
   currency: string,
+  walletSecret?: string,
 ): Promise<PaymentResult> {
   const asset = getSupportedAsset(currency) ?? SUPPORTED_ASSETS.XLM
-  const { mode } = getNetworkContext()
+  const { mode, networkPassphrase } = getNetworkContext()
 
   if (mode === "testnet" || mode === "sandbox") {
     const treasurySecret = process.env.STELLAR_TREASURY_SECRET_KEY
@@ -580,24 +814,45 @@ export async function sendPayment(
       console.warn(
         `Payment mode is set to ${mode} but STELLAR_TREASURY_SECRET_KEY is not configured. Falling back to simulation.`,
       )
-    } else if (asset.type !== "native") {
-      console.warn(
-        `${networkLabel} mode currently supports native XLM payments only. Received ${currency}. Falling back to simulation.`,
-      )
     } else {
-      try {
-        const txHash = await sendToGhostWallet(treasurySecret, walletAddress, amount, asset.code)
-        return {
-          txHash,
-          mode,
-          isSimulated: false,
-          explorerUrl: buildExplorerUrl(txHash, mode),
-          assetCode: asset.code,
-          assetType: asset.type,
-          assetIssuer: asset.issuer,
+      const server = getSorobanServer()
+
+      if (!server) {
+        console.warn(`Unable to reach Soroban RPC server. Falling back to simulation for ${asset.code}.`)
+      } else {
+        try {
+          await ensureTrustline(treasurySecret, asset, server, networkPassphrase, "treasury")
+
+          if (asset.type !== "native") {
+            if (!walletSecret) {
+              throw new Error(
+                "Recipient wallet secret is required to create a trustline for credit assets.",
+              )
+            }
+
+            await ensureTrustline(walletSecret, asset, server, networkPassphrase, "recipient")
+            await ensureTreasuryAssetBalance(treasurySecret, asset, amount, server, networkPassphrase)
+          }
+
+          const txHash = await sendToGhostWallet(treasurySecret, walletAddress, amount, asset)
+
+          console.log(`[v0] On-chain ${mode} transfer completed (${asset.code})`)
+
+          return {
+            txHash,
+            mode,
+            isSimulated: false,
+            explorerUrl: buildExplorerUrl(txHash, mode),
+            assetCode: asset.code,
+            assetType: asset.type,
+            assetIssuer: asset.issuer,
+          }
+        } catch (error) {
+          console.error(
+            `Failed to submit payment on the ${networkLabel}. Falling back to simulation.`,
+            error,
+          )
         }
-      } catch (error) {
-        console.error(`Failed to submit payment on the ${networkLabel}. Falling back to simulation.`, error)
       }
     }
   }
@@ -606,6 +861,7 @@ export async function sendPayment(
   await new Promise((resolve) => setTimeout(resolve, 500))
 
   const deterministicSeed = `${walletAddress}:${amount}:${asset.code}`
+  console.log(`[v0] Simulated transfer completed (${asset.code})`)
   return simulatePayment(walletAddress, amount, asset, {
     deterministicSeed: asset.type === "native" ? undefined : deterministicSeed,
   })
