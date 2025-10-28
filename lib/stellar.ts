@@ -891,10 +891,14 @@ async function ensureTreasuryAssetBalance(
   const fundedViaFriendbot = await requestFriendbotFunding(treasuryKeypair.publicKey(), asset, amount)
 
   if (fundedViaFriendbot) {
-    const refreshed = await server.getAccount(treasuryKeypair.publicKey())
-    const refreshedBalance = extractBalance(refreshed, asset)
+    const balanceSatisfied = await waitForSufficientAssetBalance(
+      server,
+      treasuryKeypair.publicKey(),
+      asset,
+      amount,
+    )
 
-    if (refreshedBalance && Number(refreshedBalance) >= Number(amount)) {
+    if (balanceSatisfied) {
       return
     }
   }
@@ -905,12 +909,46 @@ async function ensureTreasuryAssetBalance(
     throw new Error(`Treasury does not have sufficient ${asset.code} balance and could not be funded automatically.`)
   }
 
-  const postConversion = await server.getAccount(treasuryKeypair.publicKey())
-  const postBalance = extractBalance(postConversion, asset)
+  const balanceSatisfied = await waitForSufficientAssetBalance(
+    server,
+    treasuryKeypair.publicKey(),
+    asset,
+    amount,
+  )
 
-  if (!postBalance || Number(postBalance) < Number(amount)) {
+  if (!balanceSatisfied) {
     throw new Error(`Treasury ${asset.code} balance remains insufficient after conversion attempts.`)
   }
+}
+
+async function waitForSufficientAssetBalance(
+  server: rpc.Server,
+  publicKey: string,
+  asset: SupportedAsset,
+  amount: string,
+  attempts = 3,
+  delayMs = 1000,
+): Promise<boolean> {
+  const required = Number(amount)
+
+  if (!Number.isFinite(required) || required <= 0) {
+    return true
+  }
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const account = await server.getAccount(publicKey)
+    const balance = extractBalance(account, asset)
+
+    if (balance && Number(balance) >= required) {
+      return true
+    }
+
+    if (attempt < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+    }
+  }
+
+  return false
 }
 
 function simulatePayment(
