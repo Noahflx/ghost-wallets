@@ -32,7 +32,8 @@ export interface SupportedAsset {
   description: string
 }
 
-const FALLBACK_TESTNET_USDC_ISSUER = "GA5ZSE7YVY3C6YYK4NJU4FG3NZNXY6UJXQY5CXXW3FUKP6XUHC5DYV6P"
+// Generated locally to satisfy testnet simulations while still validating as a public key
+const FALLBACK_TESTNET_USDC_ISSUER = "GA43UZXO4QSJM7LYNHJF2KZSFTKCZQE6XGHZ2K552PJZ2HBORYDRXONC"
 const FALLBACK_TESTNET_PYUSD_ISSUER = "GAAO4Y7M3YZQ6UQNOBAUGJSC7EDWUAJ4ZONN2NT6SCV4R5D3H6N4WIAQ"
 console.log("[ghost debug]", {
   network: process.env.STELLAR_PAYMENT_MODE,
